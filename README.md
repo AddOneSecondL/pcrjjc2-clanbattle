@@ -6,11 +6,12 @@
 
 1. 打开hoshino插件文件夹
 2. git clone https://github.com/AddOneSecondL/pcrjjc2-clanbattle.git
-3. config文件里面添加pcrjjc2-clanbattle
-4. account.json填上在会里的号的账号密码
-5. 发送会战状态可以查看当前会战状态
-6. 会战前一天请清空output.txt并输入初始化会战推送
-7. 会战期间输入 切换会战推送 来打开/关闭推送，默认关闭
+3. __init__.py 第32行改成需要推送的群
+4. config文件里面添加pcrjjc2-clanbattle
+5. account.json填上在会里的号的账号密码
+6. 发送会战状态可以查看当前会战状态
+7. 会战前一天请清空output.txt并输入初始化会战推送
+8. 会战期间输入 切换会战推送 来打开/关闭推送，默认关闭
 
 
 自用改的渣代码，见谅
