@@ -17,7 +17,8 @@ from random import randint
 import time
 import os
 from time import gmtime
-from ._pcr_data import CHARA_NAME
+from hoshino.modules.priconne import chara
+from hoshino.modules.priconne._pcr_data import CHARA_NAME
 from PIL import Image, ImageDraw, ImageFont, ImageChops, ImageFilter, ImageOps
 from hoshino import util
 
