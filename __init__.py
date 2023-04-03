@@ -29,8 +29,8 @@ sv_help = '''
 sv = SafeService('会战推送',help_=sv_help, bundle='pcr查询')
 curpath = dirname(__file__)
 
-##############################
-forward_group_list = [1148952351,452983159]
+##############################下面这个框填要推送的群
+forward_group_list = []
 
 
 current_folder = os.path.dirname(__file__)
