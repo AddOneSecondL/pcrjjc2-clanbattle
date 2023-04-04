@@ -710,26 +710,52 @@ RANK_LST = [1,4,11,21,51,201,601,1201,2801,5001,10001,15001,25001,40001,60001]
 @sv.on_prefix('查档线')     #从游戏内获取数据，无数据时返回空
 async def query_line(bot,ev):
     goal = ev.message.extract_plain_text().strip()
+    await verify()
+    try:
+        load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
+    except:
+        load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
     try:
         goal_list = []
-        if ',' in goal:
-            goal_list = goal.split(',')
-        elif goal == '':
-            goal_list = [1,4,11,21,51,201,601,1201,2801,5001]
-            await bot.send(ev,'获取数据时间较长，请稍候')
+        if re.match("^[0-9,]+$", goal):
+            print('mode1')
+            rank_mode = 1
+            if ',' in goal:
+                goal_list = goal.split(',')
+            elif goal == '':
+                goal_list = [1,4,11,21,51,201,601,1201,2801,5001]
+                await bot.send(ev,'获取数据时间较长，请稍候')
+            else:
+                goal_list.append(goal)
         else:
-            goal_list.append(goal)
+            rank_mode = 2
+            await bot.send(ev,f'正在搜索行会关键词{goal}')
+            clan_name_search =  await client.callapi('/clan/search_clan', {'clan_name': goal, 'join_condition': 1, 'member_condition_range': 0, 'activity': 0, 'clan_battle_mode': 0})
+            clan_list = ''
+            for clan in clan_name_search['list']:
+                clan_name = clan['clan_name']
+                clan_list += f'[{clan_name}]'
+            clan_num = len(clan_name_search['list'])
+            await bot.send(ev,f'找到{clan_num}个与关键词相关行会,超过5个的将不会查询，请精确化关键词\n{clan_list}')
+            clan_num = 0
+            for clan in clan_name_search['list']:
+                clan_num += 1
+                if clan_num <= 5:
+                    clan_id = clan['clan_id']
+                    print(clan_id)
+                    clan_most_info = await client.callapi('/clan/others_info', {'clan_id': clan_id})
+                    clan_most_info = clan_most_info['clan']['detail']['current_period_ranking']
+                    if clan_most_info == 0:
+                        await bot.send(ev,'无法获取排名，可能是官方正在结算，请等待结算后使用本功能')
+                        return
+                else:
+                    goal_list.append(clan_most_info)
         width2 = 500*len(goal_list)
         img4 = Image.new('RGB', (1000, width2), (255, 255, 255))    
         all_num = 0
         print(len(goal_list))
         for goal in goal_list:
             goal = int(goal)
-            await verify()
-            try:
-                load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
-            except:
-                load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
             item_list = {}
             for item in load_index["item_list"]:
                 item_list[item["id"]] = item["stock"]
