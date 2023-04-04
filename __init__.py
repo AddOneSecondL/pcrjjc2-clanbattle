@@ -693,200 +693,208 @@ async def roo():
 
 
 #查档线等待修改和上传图片
-# RANK_LST = [1,4,11,21,51,201,601,1201,2801,5001,10001,15001,25001,40001,60001]
+RANK_LST = [1,4,11,21,51,201,601,1201,2801,5001,10001,15001,25001,40001,60001]
 
 
 
-# @sv.on_prefix('查档线')
-# async def query_line(bot,ev):
-#     goal = ev.message.extract_plain_text().strip()
-#     try:
-#         goal_list = []
-#         if ',' in goal:
-#             goal_list = goal.split(',')
-#         elif goal == '':
-#             goal_list = [1,4,11,21,51,201,601,1201,2801,5001]
-#             await bot.send(ev,'获取数据时间较长，请稍候')
-#         else:
-#             goal_list.append(goal)
-#         width2 = 500*len(goal_list)
-#         img4 = Image.new('RGB', (1000, width2), (255, 255, 255))    
-#         all_num = 0
-#         print(len(goal_list))
-#         for goal in goal_list:
-#             goal = int(goal)
-#             await verify()
-#             load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
-#             load_index2 = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 1})
-#             clan_name = load_index2
-#             clan_id = clan_name['clan']['detail']['clan_id']
-#             page = int((goal-1)/10)
-#             indi = goal%10
-#             if indi == 0:
-#                 indi = 10
-            
-#             page_info = await client.callapi('/clan_battle/period_ranking', {'clan_id': clan_id, 'clan_battle_id': 1037, 'period': 1, 'month': 0, 'page': page, 'is_my_clan': 0, 'is_first': 1})
-#             #print(page_info)
-#             num = 0
-            
-#             lap = 0
-#             boss = 0
-            
-#             stage = [207300000,859700000,4430900000,8113900000,999999999999]
-#             l1 = [[7200000,9600000,13000000,16800000,22500000],[9600000,12800000,18000000,22800000,30000000],[14000000,18000000,28800000,36000000,52000000],[59500000,63000000,74000000,79800000,92000000],[297500000,315000000,351500000,380000000,440000000]]
-#             lp = [3,10,34,44,999]
-            
-#             for rank in page_info['period_ranking']:
-#                 num += 1
-#                 if num == indi:
-#                     rank_num = rank['rank']
-#                     dmg = rank['damage']
-#                     mem = rank['member_num']
-#                     name = rank['clan_name']
-#                     lvid = rank['leader_viewer_id']
-#                     lname = rank['leader_name']
-#                     lunit = rank['leader_favorite_unit']['id']
-#                     grank = rank['grade_rank']
-                    
-                    
-#                     for stag in stage:
-#                         lap += 1
-#                         if dmg <= stag:
-#                             dmg_left = dmg - stage[lap-2]
-#                             break
-                    
-#                     llps = 0
-#                     while(dmg_left > 0):
-#                         boss = 0
-#                         for i in l1[lap-1]:
-#                             if dmg_left - i > 0:
-#                                 boss += 1 
-#                                 dmg_left -= i
-#                             else:
-#                                 final_dmg = dmg_left
-#                                 final_dmgg = i
-#                                 dmg_left = -1
-#                                 break
-#                         llps += 1
-#                         #print(1)
-#                     final_lap = lp[lap-2] + llps
-#                     progress = (float(final_dmg/i)*100)
-#                     progress = round(progress, 2)
-#                     msg = f'当前第 {lap} 阶段 | 第 {final_lap} 周目 {boss+1} 王 | 进度 {progress}%'
-#                     print(msg)
-                    
-#                     R_n = 0
-#                     for R in RANK_LST:
-#                         if rank_num < R:
-#                             prev_r = R
-#                             next_r = RANK_LST[R_n-1]
-#                             break
-#                         R_n += 1
-#                     img_file2 = '/data_new/Hoshino/res/img/priconne/unit'
-#                     icon_unit = rank['leader_favorite_unit']['id']
-#                     stars = rank['leader_favorite_unit']['unit_rarity']
-#                     st = 1 if stars < 3 else 3
-#                     st = st if st != 6 else 6
-#                     chara_id = str(icon_unit)[:-2]           
-#          ############################################           
-#                     clan_ids = ''
-#                     clan_idsss = 0
-#                     for n in range(0,6):
-#                         clan_info = await client.callapi('/clan/search_clan', {'clan_name': name, 'join_condition': 1, 'member_condition_range': 0, 'activity': 0, 'clan_battle_mode': 0})
-#                         #print(clan_info)
-#                         try:
-#                             clan_ids = clan_info['list']
-#                             for clan_idss in clan_ids:
-#                                 clan_lid = clan_idss['leader_viewer_id']
-#                                 if lvid == clan_lid:
-#                                     clan_idsss = clan_idss['clan_id']
-#                                     break
-#                         except:
-#                             result = f'获取{clan_name}行会信息失败{n}/6'
-#                             print(result)
-                            
-#                             pass
-#                     img = Image.open(img_file + f'//bkg.png')
-#                     draw = ImageDraw.Draw(img)            
-#                     if clan_idsss == 0:
-#                         info_msg = f'获取{clan_name}行会信息失败(该行会未开放搜索或同名过多)'
-#                         setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 15)
-#                         draw.text((350,250), f'{info_msg}', font=setFont, fill="#4A515A")
-#                     else:
-#                         clan_most_info = await client.callapi('/clan/others_info', {'clan_id': clan_idsss})
-#                         clan_member = clan_most_info['clan']['members']
-#                         descrip = clan_most_info['clan']['detail']['description']
-#                         join_con = clan_most_info['clan']['detail']['join_condition']
-#                         #info_msg = f'[RANK.{rank_num}]>>{clan_name}(人数{mem}/30)<< \t\t {clan_idsss} \t (dmg:{dmg}) \t\t\t #{descrip}#'
+@sv.on_prefix('查档线')     #从游戏内获取数据，无数据时返回空
+async def query_line(bot,ev):
+    goal = ev.message.extract_plain_text().strip()
+    #try:
+    goal_list = []
+    if ',' in goal:
+        goal_list = goal.split(',')
+    elif goal == '':
+        goal_list = [1,4,11,21,51,201,601,1201,2801,5001]
+        await bot.send(ev,'获取数据时间较长，请稍候')
+    else:
+        goal_list.append(goal)
+    width2 = 500*len(goal_list)
+    img4 = Image.new('RGB', (1000, width2), (255, 255, 255))    
+    all_num = 0
+    print(len(goal_list))
+    for goal in goal_list:
+        goal = int(goal)
+        await verify()
+        try:
+            load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
+        except:
+            load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
+        item_list = {}
+        for item in load_index["item_list"]:
+            item_list[item["id"]] = item["stock"]
+        coin = item_list[90006]   
+        load_index2 = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 1})
+        clan_name = load_index2
+        clan_id = clan_name['clan']['detail']['clan_id']
+        res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
+        clan_battle_id = res['clan_battle_id']
+
+        page = int((goal-1)/10)
+        indi = goal%10
+        if indi == 0:
+            indi = 10
         
-#          #############################################           
+        page_info = await client.callapi('/clan_battle/period_ranking', {'clan_id': clan_id, 'clan_battle_id': clan_battle_id, 'period': 1, 'month': 0, 'page': page, 'is_my_clan': 0, 'is_first': 1})
+
+        #print(page_info)
+        num = 0
         
-                    
-#                     wi = 0
-#                     de = 0
-#                     setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 15)
-#                     try:
-#                         for member in clan_member:
-#                             vid = member['viewer_id']
-#                             usr_name = member['name']
-#                             level = member['level']
-#                             lg_time = member['last_login_time']
-#                             power = member['total_power']
-#                             #clan_point = member['clan_point']
-#                             time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(lg_time))
-#                             draw.text((350+wi*120,250+de*20), f'{usr_name}', font=setFont, fill="#4A515A")
-#                             wi += 1
-#                             if wi >= 5:
-#                                 wi = 0
-#                                 de += 1
-#                     except:
-#                         pass
-#                     setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 20)
-#                     draw.text((20,220), f'当前位次: {rank_num}位', font=setFont, fill="#4A515A")
-#                     draw.text((20,240), f'会长: {lname}', font=setFont, fill="#4A515A")
-#                     draw.text((20,260), f'VID: [{lvid}]', font=setFont, fill="#4A515A")
-#                     draw.text((20,280), f'上期位次: {grank}位', font=setFont, fill="#4A515A")
-#                     try:
-#                         draw.text((20,180), f'{descrip}', font=setFont, fill="#4A515A")
-#                     except:
-#                         pass
-#                     draw.text((350,220), msg, font=setFont, fill="#4A515A")
-                    
-#                     setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 30)
-#                     draw.text((750,75), f'{dmg}', font=setFont, fill="#4A515A")
-#                     draw.text((850,135), f'{mem}/30', font=setFont, fill="#4A515A")
-#                     draw.text((50,440), f'{prev_r}位', font=setFont, fill="#4A515A")
-#                     draw.text((850,440), f'{next_r}位', font=setFont, fill="#4A515A")
-                    
-#                     setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 40)
-#                     draw.text((500,15), f'{name}', font=setFont, fill="#4A515A")
-#                     img3 = Image.open(img_file2 + f'//icon_unit_{int(chara_id)}{st}1.png')
-#                     img3 = img3.resize((160, 160))
-#                     img.paste(img3, (17,17))            
-#                     img3 = Image.open(img_file + f'//91001.png')
-#                     img3 = img3.resize((50, 50))
-#                     img.paste(img3, (50,380))  
-#                     img.paste(img3, (900,380)) 
-                    
-#                     setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 50)
-#                     #draw.text((270,10), f'--位', font=setFont, fill="#CC9900")
-                    
-#                     if len(goal_list) != 1:
+        lap = 0
+        boss = 0
+        
+        stage = [207300000,859700000,4430900000,8113900000,999999999999]
+        l1 = [[7200000,9600000,13000000,16800000,22500000],[9600000,12800000,18000000,22800000,30000000],[14000000,18000000,28800000,36000000,52000000],[59500000,63000000,74000000,79800000,92000000],[297500000,315000000,351500000,380000000,440000000]]
+        lp = [3,10,34,44,999]
+        
+        for rank in page_info['period_ranking']:
+            num += 1
+            if num == indi:
+                rank_num = rank['rank']
+                dmg = rank['damage']
+                mem = rank['member_num']
+                name = rank['clan_name']
+                lvid = rank['leader_viewer_id']
+                lname = rank['leader_name']
+                lunit = rank['leader_favorite_unit']['id']
+                grank = rank['grade_rank']
+                
+                
+                for stag in stage:
+                    lap += 1
+                    if dmg <= stag:
+                        dmg_left = dmg - stage[lap-2]
+                        break
+                
+                llps = 0
+                while(dmg_left > 0):
+                    boss = 0
+                    for i in l1[lap-1]:
+                        if dmg_left - i > 0:
+                            boss += 1 
+                            dmg_left -= i
+                        else:
+                            final_dmg = dmg_left
+                            final_dmgg = i
+                            dmg_left = -1
+                            break
+                    llps += 1
+                    #print(1)
+                final_lap = lp[lap-2] + llps
+                progress = (float(final_dmg/i)*100)
+                progress = round(progress, 2)
+                msg = f'当前第 {lap} 阶段 | 第 {final_lap} 周目 {boss+1} 王 | 进度 {progress}%'
+                print(msg)
+                
+                R_n = 0
+                for R in RANK_LST:
+                    if rank_num < R:
+                        prev_r = R
+                        next_r = RANK_LST[R_n-1]
+                        break
+                    R_n += 1
+                img_file2 = '/data_new/Hoshino/res/img/priconne/unit'
+                icon_unit = rank['leader_favorite_unit']['id']
+                stars = rank['leader_favorite_unit']['unit_rarity']
+                st = 1 if stars < 3 else 3
+                st = st if st != 6 else 6
+                chara_id = str(icon_unit)[:-2]           
+     ############################################           
+                clan_ids = ''
+                clan_idsss = 0
+                for n in range(0,6):
+                    clan_info = await client.callapi('/clan/search_clan', {'clan_name': name, 'join_condition': 1, 'member_condition_range': 0, 'activity': 0, 'clan_battle_mode': 0})
+                    #print(clan_info)
+                    try:
+                        clan_ids = clan_info['list']
+                        for clan_idss in clan_ids:
+                            clan_lid = clan_idss['leader_viewer_id']
+                            if lvid == clan_lid:
+                                clan_idsss = clan_idss['clan_id']
+                                break
+                    except:
+                        result = f'获取{clan_name}行会信息失败{n}/6'
+                        print(result)
                         
-                        
-#                         img4.paste(img, (0,500*all_num))
+                        pass
+                img = Image.open(img_file + f'//bkg.png')
+                draw = ImageDraw.Draw(img)            
+                if clan_idsss == 0:
+                    info_msg = f'获取{clan_name}行会信息失败(该行会未开放搜索或同名过多)'
+                    setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 15)
+                    draw.text((350,250), f'{info_msg}', font=setFont, fill="#4A515A")
+                else:
+                    clan_most_info = await client.callapi('/clan/others_info', {'clan_id': clan_idsss})
+                    clan_member = clan_most_info['clan']['members']
+                    descrip = clan_most_info['clan']['detail']['description']
+                    join_con = clan_most_info['clan']['detail']['join_condition']
+    
+                
+                wi = 0
+                de = 0
+                setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 15)
+                try:
+                    for member in clan_member:
+                        vid = member['viewer_id']
+                        usr_name = member['name']
+                        level = member['level']
+                        lg_time = member['last_login_time']
+                        power = member['total_power']
+                        #clan_point = member['clan_point']
+                        time_str = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(lg_time))
+                        draw.text((350+wi*120,250+de*20), f'{usr_name}', font=setFont, fill="#4A515A")
+                        wi += 1
+                        if wi >= 5:
+                            wi = 0
+                            de += 1
+                except:
+                    pass
+                setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 20)
+                draw.text((20,220), f'当前位次: {rank_num}位', font=setFont, fill="#4A515A")
+                draw.text((20,240), f'会长: {lname}', font=setFont, fill="#4A515A")
+                draw.text((20,260), f'VID: [{lvid}]', font=setFont, fill="#4A515A")
+                draw.text((20,280), f'上期位次: {grank}位', font=setFont, fill="#4A515A")
+                try:
+                    draw.text((20,180), f'{descrip}', font=setFont, fill="#4A515A")
+                except:
+                    pass
+                draw.text((350,220), msg, font=setFont, fill="#4A515A")
+                
+                setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 30)
+                draw.text((750,75), f'{dmg}', font=setFont, fill="#4A515A")
+                draw.text((850,135), f'{mem}/30', font=setFont, fill="#4A515A")
+                draw.text((50,440), f'{prev_r}位', font=setFont, fill="#4A515A")
+                draw.text((850,440), f'{next_r}位', font=setFont, fill="#4A515A")
+                
+                setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 40)
+                draw.text((500,15), f'{name}', font=setFont, fill="#4A515A")
+                
+                try:
+                    img3 = Image.open(img_file2 + f'//icon_unit_{int(chara_id)}{st}1.png')
+                    img3 = img3.resize((160, 160))
+                    img.paste(img3, (17,17))            
+                except:
+                    pass
+                
+                setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 50)
+                #draw.text((270,10), f'--位', font=setFont, fill="#CC9900")
+                
+                if len(goal_list) != 1:
                     
                     
-                        
-#                     all_num+=1    
+                    img4.paste(img, (0,500*all_num))
+                
+                
                     
-#         if len(goal_list) != 1:
-#             imgq = pic2b64(img4)
-#             imgq = MessageSegment.image(imgq)
-#         else:
-#             imgq = pic2b64(img)
-#             imgq = MessageSegment.image(imgq)        
-#         await bot.send(ev,imgq)
-#     except:
-#         await bot.send(ev,'获取数据时发生错误，请重试')
-#         pass
+                all_num+=1    
+                
+    if len(goal_list) != 1:
+        imgq = pic2b64(img4)
+        imgq = MessageSegment.image(imgq)
+    else:
+        imgq = pic2b64(img4)
+        imgq = MessageSegment.image(imgq)        
+    await bot.send(ev,imgq)
+    #except:
+        # await bot.send(ev,'获取数据时发生错误，请重试')
+        # pass
