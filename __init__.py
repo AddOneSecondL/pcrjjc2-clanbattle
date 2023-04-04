@@ -148,6 +148,14 @@ async def teafak():
                 item_list[item["id"]] = item["stock"]
             coin = item_list[90006]
             pass
+    
+    if arrow == 0:
+        re_battle_id = 0
+        for line in open(current_folder + "/Output.txt",encoding='utf-8'):
+            if line != '':
+                line = line.split(',')
+                re_battle_id = int(line[4])        
+        arrow = re_battle_id
         
     if res != 0:
         next_lap = res['lap_num']    #当前周目
@@ -216,7 +224,7 @@ async def teafak():
                     pre_push[next_boss-1] = []
                 #push = True
             msg += f'[{curr_side}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}\n'
-            output = f'{day},{hour},{minu},{seconds},{arrow},{name},{vid},{lap},{boss},{damage},{kill},{enemy_id}'  #记录出刀，后面要用
+            output = f'{day},{hour},{minu},{seconds},{arrow},{name},{vid},{lap},{boss},{damage},{kill},{enemy_id},{clan_battle_id}'  #记录出刀，后面要用
             with open(current_folder+"/Output.txt","a",encoding='utf-8') as file:   #windows这么写是不是会有问题
                 #if output not in file:
                 file.write(str(output)+'\n')
@@ -423,7 +431,10 @@ async def status(bot,ev):
         hp_bar = rounded_rectangle((length, 95), 10, hp_color)
         img.paste(hp_bar, (80, 40 + (boss_num - 1) * 142), hp_bar)
         try:    #晚点改
-            img2 = R.img(f'priconne/unit/{boss_ooo[img_num]}.png').open()
+            try:
+                img2 = R.img(f'priconne/unit/{boss_ooo[img_num]}.png').open()
+            except:
+                img2 = R.img(f'priconne/unit/icon_unit_100131.png').open()
             img_num += 1
             img2 = img2.resize((64,64),Image.ANTIALIAS)
             img.paste(img2, (93, 50+(boss_num-1)*142))
@@ -520,8 +531,9 @@ async def status(bot,ev):
                 re_dmg = int(line[9])
                 re_kill = int(line[10])
                 re_boss_id = int(line[11])
+                re_clan_battle_id = int(line[12])
                 if_today = False
-                if (day == today and hour >= 5) or (day == today + 1 and hour < 5):
+                if ((day == today and hour >= 5) or (day == today + 1 and hour < 5)) and (re_clan_battle_id == clan_battle_id):
                     if_today = True
                 if int(vid) == int(re_vid) and if_today == True:
                     if re_kill == 0 and kill_sign == 0:
