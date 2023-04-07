@@ -750,9 +750,10 @@ async def query_line(bot,ev):
                         break
                     clan_most_info = await client.callapi('/clan/others_info', {'clan_id': clan_id})
                     clan_most_info = clan_most_info['clan']['detail']['current_period_ranking']
-                    goal_list.append(clan_most_info)
                     if clan_most_info == 0:
                         pass
+                    goal_list.append(clan_most_info)
+
                 else:
                     break
                     #goal_list.append(clan_most_info)
