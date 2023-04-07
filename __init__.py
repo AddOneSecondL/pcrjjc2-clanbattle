@@ -117,6 +117,20 @@ side = {
 }
 curr_side = '_'
 
+@sv.on_fullmatch('fffff')
+async def test2(bot,ev):
+    item_list = {}
+    await verify()
+    load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})   #获取会战币api
+    for item in load_index["item_list"]:
+        item_list[item["id"]] = item["stock"]
+    coin = item_list[90006]
+    clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
+    clan_id = clan_info['clan']['detail']['clan_id']
+    res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
+    print(res)
+
+
 @sv.scheduled_job('interval', seconds=20)
 async def teafak():
     global coin,arrow_rec,side,curr_side,arrow,sw,pre_push,fnum,forward_group_list
@@ -352,7 +366,7 @@ async def cle(bot , ev):
 @sv.on_fullmatch('会战帮助')
 async def chelp(bot , ev): 
     # msg = '[查轴[A/B/C/D/E][S/T/TS][1/2/3/4/5][ID]]:查轴，中括号内为选填项，可叠加使用。*S/T/TS分别表示手动/自动/半自动*\n[分刀[A/B/C/D/E][毛分/毛伤][S/T/TS][1/2/3/4/5]]:根据box分刀，中括号内为选填项，可叠加使用。*可选择限定boss，如123代表限定123王*\n[(添加/删除)(角色/作业)黑名单 + 名称或ID]:支持多角色，例如春环环奈，无空格。作业序号：花舞作业的序号，如‘A101’\n[(添加/删除)角色缺失 + 角色名称]:支持多角色，例如春环环奈，无空格\n[查看(作业黑名单/角色缺失/角色黑名单)]\n[清空(作业黑名单/角色缺失/角色黑名单)]\n[切换会战推送]:打开/关闭会战推送\n[会战预约(1/2/3/4/5)]:预约提醒\n[会战表]:查看所有预约\n[编写中...][会战查刀(ID)]:查看出刀详情\n[查档线]:若参数为空，则输出10000名内各档档线；若有多个参数，请使用英文逗号隔开。\n[清空预约表]:(仅SU可用)\n'
-    msg = '[查档线 名次/行会名]:若参数为空，则输出10000名内各档档线；若有多个参数，请使用英文逗号隔开。结算期间数据为空\n示例:[查档线][查档线 1,2,3,4][查档线 灯灯的淑女理论]\n[初始化会战推送]:会战前一天输入这个，记得清空Output.txt内的内容，不要删除Output.txt\n[切换会战推送]:打开/关闭会战推送\n[会战预约(1/2/3/4/5)]:预约提醒\n[会战表]:查看所有预约\n[清空预约表]:(仅SU可用)\n'
+    msg = '[查档线]:若参数为空，则输出10000名内各档档线；若有多个参数，请使用英文逗号隔开。结算期间数据为空\n[初始化会战推送]:会战前一天输入这个，记得清空Output.txt内的内容，不要删除Output.txt\n[切换会战推送]:打开/关闭会战推送\n[会战预约(1/2/3/4/5)]:预约提醒\n[会战表]:查看所有预约\n[清空预约表]:(仅SU可用)\n'
     await bot.send(ev,msg)
 
 
@@ -394,7 +408,7 @@ async def status(bot,ev):
     ##第一部分
     img = Image.open(img_file+'/cbt.png')
     draw = ImageDraw.Draw(img)
-    setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 25)
+    setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 40)
     await verify()
     
     load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
@@ -409,7 +423,8 @@ async def status(bot,ev):
     clan_name = res['user_clan']['clan_name']
     draw.text((1340,50), f'{clan_name}', font=setFont, fill="#A020F0")
     rank = res['period_rank']
-    draw.text((1340,170), f'{rank}', font=setFont, fill="#A020F0")
+    setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 25)
+    draw.text((1340,170), f'排名：{rank}', font=setFont, fill="#A020F0")
     lap = res['lap_num']
     img_num = 0 
     for boss in res['boss_info']:
@@ -449,7 +464,7 @@ async def status(bot,ev):
         # 绘制半透明背景
         bg = Image.new('RGBA', (bg_width, bg_height), bg_color)
         img.paste(bg, (160, 38+(boss_num-1)*142), bg)
-        
+        setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 25)
         draw.text((160, 40+(boss_num-1)*142), f'{format_number_with_commas(hp)}/{format_number_with_commas(mhp)}', font=setFont, fill="#FFFFFF")
         
         
@@ -484,7 +499,7 @@ async def status(bot,ev):
     #print(res2)
     row = 0
     width = 0
-    setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 15)
+    setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 20)
     last_rank = res2['last_total_ranking']
     draw.text((1320, 320), f'上期排名:{last_rank}', font=setFont, fill="#A020F0")
     for members in res2['clan']['members']:
@@ -514,6 +529,7 @@ async def status(bot,ev):
             today = todayt[2]
         
         #today = 26
+        setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 15)
         draw.text((1000,760), f'{today}日', font=setFont, fill="#A020F0")
         img3 = Image.new('RGB', (25, 17), "white")
         img4 = Image.new('RGB', (12, 17), "red")
@@ -608,7 +624,7 @@ async def status(bot,ev):
                 if kill == 1:
                     ifkill = '并击破'
                     #push = True
-                msg = f'[{day}日{hour}:{minu}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}'
+                msg = f'[{day}日{hour:02}:{minu:02}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}'
                 if kill == 1:
                     draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="yellow")
                 else:
@@ -722,13 +738,14 @@ async def query_line(bot,ev):
             rank_mode = 1
             if ',' in goal:
                 goal_list = goal.split(',')
-            elif goal == '':
-                goal_list = [1,4,11,21,51,201,601,1201,2801,5001]
-                await bot.send(ev,'获取数据时间较长，请稍候')
             else:
                 goal_list.append(goal)
+        elif goal == '':
+            goal_list = [1,4,11,21,51,201,601,1201,2801,5001]
+            await bot.send(ev,'获取数据时间较长，请稍候')
         else:
             rank_mode = 2
+            goal_list = []
             await bot.send(ev,f'正在搜索行会关键词{goal}')
             clan_name_search =  await client.callapi('/clan/search_clan', {'clan_name': goal, 'join_condition': 1, 'member_condition_range': 0, 'activity': 0, 'clan_battle_mode': 0})
             clan_list = ''
@@ -743,13 +760,18 @@ async def query_line(bot,ev):
                 if clan_num <= 5:
                     clan_id = clan['clan_id']
                     print(clan_id)
+                    if clan_id == 0:
+                        break
                     clan_most_info = await client.callapi('/clan/others_info', {'clan_id': clan_id})
                     clan_most_info = clan_most_info['clan']['detail']['current_period_ranking']
+                    goal_list.append(clan_most_info)
                     if clan_most_info == 0:
                         await bot.send(ev,'无法获取排名，可能是官方正在结算，请等待结算后使用本功能')
                         return
                 else:
-                    goal_list.append(clan_most_info)
+                    break
+                    #goal_list.append(clan_most_info)
+                    #print(goal_list)
         width2 = 500*len(goal_list)
         img4 = Image.new('RGB', (1000, width2), (255, 255, 255))    
         all_num = 0
@@ -825,9 +847,9 @@ async def query_line(bot,ev):
                     print(msg)
                     
                     R_n = 0
-                    for R in RANK_LST:
-                        if rank_num < R:
-                            prev_r = R
+                    for RA in RANK_LST:
+                        if rank_num < RA:
+                            prev_r = RA
                             next_r = RANK_LST[R_n-1]
                             break
                         R_n += 1
@@ -908,7 +930,8 @@ async def query_line(bot,ev):
                     draw.text((500,15), f'{name}', font=setFont, fill="#4A515A")
                     
                     try:
-                        img3 = R.img(f'priconne/unit/icon_unit_{int(chara_id)}{st}1.png').open()
+                            
+                        img3 = R.img(f'priconne/unit/icon_unit_{chara_id}{st}1.png').open()
                         img3 = img3.resize((160, 160))
                         img.paste(img3, (17,17))            
                     except:
@@ -930,7 +953,7 @@ async def query_line(bot,ev):
             imgq = pic2b64(img4)
             imgq = MessageSegment.image(imgq)
         else:
-            imgq = pic2b64(img4)
+            imgq = pic2b64(img)
             imgq = MessageSegment.image(imgq)        
         await bot.send(ev,imgq)
     except:
