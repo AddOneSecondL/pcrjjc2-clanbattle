@@ -117,20 +117,6 @@ side = {
 }
 curr_side = '_'
 
-@sv.on_fullmatch('fffff')
-async def test2(bot,ev):
-    item_list = {}
-    await verify()
-    load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})   #获取会战币api
-    for item in load_index["item_list"]:
-        item_list[item["id"]] = item["stock"]
-    coin = item_list[90006]
-    clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
-    clan_id = clan_info['clan']['detail']['clan_id']
-    res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
-    print(res)
-
-
 @sv.scheduled_job('interval', seconds=20)
 async def teafak():
     global coin,arrow_rec,side,curr_side,arrow,sw,pre_push,fnum,forward_group_list
@@ -766,12 +752,14 @@ async def query_line(bot,ev):
                     clan_most_info = clan_most_info['clan']['detail']['current_period_ranking']
                     goal_list.append(clan_most_info)
                     if clan_most_info == 0:
-                        await bot.send(ev,'无法获取排名，可能是官方正在结算，请等待结算后使用本功能')
-                        return
+                        pass
                 else:
                     break
                     #goal_list.append(clan_most_info)
                     #print(goal_list)
+        if goal_list == []:
+            await bot.send(ev,'无法获取排名，可能是官方正在结算，请等待结算后使用本功能')
+            return
         width2 = 500*len(goal_list)
         img4 = Image.new('RGB', (1000, width2), (255, 255, 255))    
         all_num = 0
@@ -787,7 +775,7 @@ async def query_line(bot,ev):
             clan_id = clan_name['clan']['detail']['clan_id']
             res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
             clan_battle_id = res['clan_battle_id']
-    
+
             page = int((goal-1)/10)
             indi = goal%10
             if indi == 0:
@@ -859,7 +847,7 @@ async def query_line(bot,ev):
                     st = 1 if stars < 3 else 3
                     st = st if st != 6 else 6
                     chara_id = str(icon_unit)[:-2]           
-         ############################################           
+        ############################################           
                     clan_ids = ''
                     clan_idsss = 0
                     for n in range(0,6):
