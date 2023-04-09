@@ -945,6 +945,7 @@ async def query_line(bot,ev):
             imgq = pic2b64(img)
             imgq = MessageSegment.image(imgq)        
         await bot.send(ev,imgq)
-    except:
+    except Exception as e:
+        print(e)
         await bot.send(ev,'获取数据时发生错误，请重试')
         pass
