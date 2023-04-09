@@ -14,6 +14,7 @@ from traceback import format_exc
 from .safeservice import SafeService
 from hoshino.util import pic2b64
 from random import randint
+import re
 import time
 import os
 from time import gmtime
