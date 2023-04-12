@@ -102,6 +102,8 @@ async def validate(session):
         captcha_lck.release()
 
 swa = 0
+boss_status = [0,0,0,0,0]
+in_game = [0,0,0,0,0]
 pre_push = [[],[],[],[],[]]
 coin = 0
 arrow = 0
@@ -118,9 +120,23 @@ side = {
 }
 curr_side = '_'
 
+@sv.on_fullmatch('fffff')
+async def test2(bot,ev):
+    item_list = {}
+    await verify()
+    load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})   #获取会战币api
+    for item in load_index["item_list"]:
+        item_list[item["id"]] = item["stock"]
+    coin = item_list[90006]
+    clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
+    clan_id = clan_info['clan']['detail']['clan_id']
+    res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
+    print(res)
+
+
 @sv.scheduled_job('interval', seconds=20)
 async def teafak():
-    global coin,arrow_rec,side,curr_side,arrow,sw,pre_push,fnum,forward_group_list
+    global coin,arrow_rec,side,curr_side,arrow,sw,pre_push,fnum,forward_group_list,boss_status,in_game
     if sw == 0:     #会战推送开关
         return
     if coin == 0:   #初始化获取硬币数
@@ -150,27 +166,40 @@ async def teafak():
             coin = item_list[90006]
             pass
     
-    if arrow == 0:
-        re_battle_id = 0
-        for line in open(current_folder + "/Output.txt",encoding='utf-8'):
-            if line != '':
-                line = line.split(',')
-                re_battle_id = int(line[4])        
-        arrow = re_battle_id
+    num = 0
+    for boss_info in res['boss_info']:
+        lap_num = boss_info['lap_num']
+        if lap_num != boss_status[num]:
+            boss_status[num] = lap_num
+            msg += f'全新的{lap_num}周目{num+1}王来了！'
+            push_list = pre_push[num]
+            if push_list != []:     #预约后群内和行会内提醒
+                chat_content = f'{next_lap}周目{next_boss}王已被预约，请耐心等候！'
+                try:
+                    await verify()
+                    await client.callapi('/clan/chat', {'clan_id': clan_id, 'type': 0, 'message': chat_content})
+                except:
+                    pass
+                warn = ''
+                for pu in push_list:
+                    pu = pu.split('|')
+                    uid = int(pu[0])
+                    gid = int(pu[1])
+                    atmsg = f'提醒：已到{next_lap}周目 {next_boss} 王！请注意沟通上一尾刀~\n[CQ:at,qq={uid}]'
+                    await bot.send_group_msg(group_id = gid,message = atmsg)
+                pre_push[num] = []
+        num += 1
         
     if res != 0:
-        next_lap = res['lap_num']    #当前周目
-        for side1 in side:          #计算面数
-            if next_lap > side1:
-                next_lap_1 = side[side1]
-            else:
-                break
-        if curr_side != next_lap_1:
-            curr_side = next_lap_1
-            msg += f'[CQ:at,qq=all]当前到达{curr_side}面，注意调整出刀阵容!'
-        next_boss = 1
-        info = res['boss_info'] #BOSS状态
-        
+        #next_lap = res['lap_num']    #当前周目
+        # for side1 in side:          #计算面数
+        #     if next_lap > side1:
+        #         next_lap_1 = side[side1]
+        #     else:
+        #         break
+        # if curr_side != next_lap_1:
+        #     curr_side = next_lap_1
+        #     msg += f'[CQ:at,qq=all]当前到达{curr_side}面，注意调整出刀阵容!'
         history = reversed(res['damage_history'])   #从返回的出刀记录刀的状态
         clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
         clan_id = clan_info['clan']['detail']['clan_id']
@@ -196,62 +225,37 @@ async def teafak():
             seconds = real_time[5]
             arrow = hst['history_id']   #记录指针
             enemy_id = hst['enemy_id']  #BOSSID，暂时没找到用处
-            if boss == 5:   #下一圈和下一个boss逻辑，反正要改会战了，凑合用着
-                next_boss = 1
-                next_lap = lap + 1
+            is_auto = hst['is_auto']
+            if is_auto == 1:
+                is_auto_r = '自动刀'
             else:
-                next_boss = boss + 1
-                next_lap = lap
+                is_auto_r = '手动刀'
+            # if boss == 5:   #下一圈和下一个boss逻辑，反正要改会战了，凑合用着
+            #     next_boss = 1
+            #     next_lap = lap + 1
+            # else:
+            #     next_boss = boss + 1
+            #     next_lap = lap
             ifkill = ''     #击杀变成可读
             if kill == 1:
                 ifkill = '并击破'
-                if boss == 5:   #我为啥要这么写
-                    push_list = pre_push[0]
-                elif boss != 5:
-                    push_list = pre_push[next_boss-1]
-                
-                if push_list != []:     #预约后群内和行会内提醒
-                    await verify()
-                    chat_content = f'{next_lap}周目{next_boss}王已被预约，请耐心等候！'
-
-                    await client.callapi('/clan/chat', {'clan_id': clan_id, 'type': 0, 'message': chat_content})
-                    warn = ''
-                    for pu in push_list:
-                        pu = pu.split('|')
-                        uid = int(pu[0])
-                        gid = int(pu[1])
-                        atmsg = f'提醒：已到{next_lap}周目 {next_boss} 王！请注意沟通上一尾刀~\n[CQ:at,qq={uid}]'
-                        await bot.send_group_msg(group_id = gid,message = atmsg)
-                    pre_push[next_boss-1] = []
                 #push = True
-            msg += f'[{curr_side}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}\n'
-            output = f'{day},{hour},{minu},{seconds},{arrow},{name},{vid},{lap},{boss},{damage},{kill},{enemy_id},{clan_battle_id}'  #记录出刀，后面要用
-            with open(current_folder+"/Output.txt","a",encoding='utf-8') as file:   #windows这么写是不是会有问题
-                #if output not in file:
+            msg += f'[{curr_side}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}({is_auto_r})\n'
+            output = f'{day},{hour},{minu},{seconds},{arrow},{name},{vid},{lap},{boss},{damage},{kill},{enemy_id},{clan_battle_id},{is_auto}'  #记录出刀，后面要用
+            with open(current_folder+"/Output.txt","a",encoding='utf-8') as file:   
                 file.write(str(output)+'\n')
-                file.close()                
-        boss_info2 = await client.callapi('/clan_battle/boss_info', {'clan_id': clan_id, 'clan_battle_id': clan_battle_id, 'lap_num': next_lap, 'order_num': next_boss})  #这里找一下获取会战id的api，应该top就有，晚点更新
-        #print(boss_info2)
-        fnum1 = boss_info2['fighter_num']
-        
-        if fnum == 0:
-            if arrow_rec == 0:
-                arrow_rec = arrow
+                file.close()
 
-        if fnum < fnum1:    #垃圾代码，后面记录人数
-            fnum = fnum1
-            msg += f'90秒内有{fnum}名玩家正在实战'
-        elif fnum > fnum1:
-            fnum = fnum1
-            if arrow_rec != arrow:
-                msg += f'90秒内有{fnum}名玩家正在实战'
-                arrow_rec = arrow
-            else:
-                msg += f'90秒内有{fnum}名玩家正在实战,但是有玩家并没有结算,请注意沟通进行中的出刀'
-        elif fnum == fnum1:
-            if arrow_rec != arrow:
-                msg += f'90秒内有{fnum}名玩家正在实战'
-                arrow_rec = arrow
+        change = False
+        for num in range(0,5):  
+            boss_info2 = await client.callapi('/clan_battle/boss_info', {'clan_id': clan_id, 'clan_battle_id': clan_battle_id, 'lap_num': boss_status[num], 'order_num': num+1}) 
+            fnum = boss_info2['fighter_num']
+            if in_game[num] != fnum:
+                in_game[num] = fnum
+                change = True
+        if change == True:
+            msg += f'当前实战人数发生变化:\n[{in_game[0]}][{in_game[1]}][{in_game[2]}][{in_game[3]}][{in_game[4]}]'
+
         if msg != '':
             if len(msg)>200:
                 msg = '...\n' + msg[-200:] 
@@ -353,7 +357,7 @@ async def cle(bot , ev):
 @sv.on_fullmatch('会战帮助')
 async def chelp(bot , ev): 
     # msg = '[查轴[A/B/C/D/E][S/T/TS][1/2/3/4/5][ID]]:查轴，中括号内为选填项，可叠加使用。*S/T/TS分别表示手动/自动/半自动*\n[分刀[A/B/C/D/E][毛分/毛伤][S/T/TS][1/2/3/4/5]]:根据box分刀，中括号内为选填项，可叠加使用。*可选择限定boss，如123代表限定123王*\n[(添加/删除)(角色/作业)黑名单 + 名称或ID]:支持多角色，例如春环环奈，无空格。作业序号：花舞作业的序号，如‘A101’\n[(添加/删除)角色缺失 + 角色名称]:支持多角色，例如春环环奈，无空格\n[查看(作业黑名单/角色缺失/角色黑名单)]\n[清空(作业黑名单/角色缺失/角色黑名单)]\n[切换会战推送]:打开/关闭会战推送\n[会战预约(1/2/3/4/5)]:预约提醒\n[会战表]:查看所有预约\n[编写中...][会战查刀(ID)]:查看出刀详情\n[查档线]:若参数为空，则输出10000名内各档档线；若有多个参数，请使用英文逗号隔开。\n[清空预约表]:(仅SU可用)\n'
-    msg = '[查档线]:若参数为空，则输出10000名内各档档线；若有多个参数，请使用英文逗号隔开。结算期间数据为空\n[初始化会战推送]:会战前一天输入这个，记得清空Output.txt内的内容，不要删除Output.txt\n[切换会战推送]:打开/关闭会战推送\n[会战预约(1/2/3/4/5)]:预约提醒\n[会战表]:查看所有预约\n[清空预约表]:(仅SU可用)\n'
+    msg = '[查档线]:若参数为空，则输出10000名内各档档线；若有多个参数，请使用英文逗号隔开。新增按照关键词查档线。结算期间数据为空\n[初始化会战推送]:会战前一天输入这个，记得清空Output.txt内的内容，不要删除Output.txt\n[切换会战推送]:打开/关闭会战推送\n[会战预约(1/2/3/4/5)]:预约提醒\n[会战表]:查看所有预约\n[清空预约表]:(仅SU可用)\n'
     await bot.send(ev,msg)
 
 
@@ -389,7 +393,7 @@ async def cout(bot , ev):
 
 @sv.on_fullmatch('会战状态')    #这个更是重量级
 async def status(bot,ev):
-    boss_ooo = [305700,302000,300602,304101,300100]
+    #boss_ooo = [305700,302000,300602,304101,300100]
     #try:
     await bot.send(ev,'生成中...')
     ##第一部分
@@ -417,6 +421,7 @@ async def status(bot,ev):
     for boss in res['boss_info']:
         boss_num = boss['order_num']
         boss_id = boss['enemy_id']
+        boss_lap_num = boss['lap_num']
         mhp = boss['max_hp']
         hp = boss['current_hp']
         hp_percentage = hp / mhp  # 计算血量百分比
@@ -428,6 +433,10 @@ async def status(bot,ev):
             hp_color = "orange"
         else:
             hp_color = "red"
+        if boss_lap_num - lap == 2:
+            hp_color = "purple"
+        elif boss_lap_num - lap == 1:
+            hp_color = "pink"
     
         length = int((hp / mhp) * 1180)
         hp_bar = rounded_rectangle((length, 95), 10, hp_color)
@@ -440,6 +449,7 @@ async def status(bot,ev):
             img_num += 1
             img2 = img2.resize((64,64),Image.ANTIALIAS)
             img.paste(img2, (93, 50+(boss_num-1)*142))
+            
         except:
             pass
         
@@ -743,8 +753,8 @@ async def query_line(bot,ev):
             await bot.send(ev,f'找到{clan_num}个与关键词相关行会,超过5个的将不会查询，请精确化关键词\n{clan_list}')
             clan_num = 0
             for clan in clan_name_search['list']:
-                clan_num += 1
-                if clan_num <= 5:
+                
+                if clan_num <= 4:
                     clan_id = clan['clan_id']
                     print(clan_id)
                     if clan_id == 0:
@@ -752,8 +762,9 @@ async def query_line(bot,ev):
                     clan_most_info = await client.callapi('/clan/others_info', {'clan_id': clan_id})
                     clan_most_info = clan_most_info['clan']['detail']['current_period_ranking']
                     if clan_most_info == 0:
-                        pass
+                        continue
                     goal_list.append(clan_most_info)
+                    clan_num += 1
 
                 else:
                     break
@@ -777,7 +788,7 @@ async def query_line(bot,ev):
             clan_id = clan_name['clan']['detail']['clan_id']
             res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
             clan_battle_id = res['clan_battle_id']
-
+    
             page = int((goal-1)/10)
             indi = goal%10
             if indi == 0:
@@ -849,7 +860,7 @@ async def query_line(bot,ev):
                     st = 1 if stars < 3 else 3
                     st = st if st != 6 else 6
                     chara_id = str(icon_unit)[:-2]           
-        ############################################           
+         ############################################           
                     clan_ids = ''
                     clan_idsss = 0
                     for n in range(0,6):
@@ -863,14 +874,14 @@ async def query_line(bot,ev):
                                     clan_idsss = clan_idss['clan_id']
                                     break
                         except:
-                            result = f'获取{clan_name}行会信息失败{n}/n'
+                            result = f'获取行会信息失败{n}/n'
                             print(result)
                             
                             pass
                     img = Image.open(img_file + f'//bkg.png')
                     draw = ImageDraw.Draw(img)            
                     if clan_idsss == 0:
-                        info_msg = f'获取{clan_name}行会信息失败(该行会未开放搜索或同名过多)'
+                        info_msg = f'获取行会信息失败(该行会未开放搜索或同名过多)'
                         setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 15)
                         draw.text((350,250), f'{info_msg}', font=setFont, fill="#4A515A")
                     else:
