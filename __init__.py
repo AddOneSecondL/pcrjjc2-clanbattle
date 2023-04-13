@@ -120,20 +120,6 @@ side = {
 }
 curr_side = '_'
 
-@sv.on_fullmatch('fffff')
-async def test2(bot,ev):
-    item_list = {}
-    await verify()
-    load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})   #获取会战币api
-    for item in load_index["item_list"]:
-        item_list[item["id"]] = item["stock"]
-    coin = item_list[90006]
-    clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
-    clan_id = clan_info['clan']['detail']['clan_id']
-    res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
-    print(res)
-
-
 @sv.scheduled_job('interval', seconds=20)
 async def teafak():
     global coin,arrow_rec,side,curr_side,arrow,sw,pre_push,fnum,forward_group_list,boss_status,in_game
@@ -165,7 +151,23 @@ async def teafak():
                 item_list[item["id"]] = item["stock"]
             coin = item_list[90006]
             pass
-    
+
+
+#判定是否处于会战期间    
+    is_interval = load_index['clan_battle']['is_interval']
+    if is_interval == 1:
+        mode_change_open = load_index['clan_battle']['mode_change_limit_start_time']
+        mode_change_open = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(mode_change_open))
+        mode_change_limit = load_index['clan_battle']['mode_change_limit_time']
+        mode_change_limit = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(mode_change_limit))
+        msg = f'当前会战未开放，请在会战前一天初始化会战推送\n会战模式可切换时间{mode_change_open}-{mode_change_limit}'
+        sw = 0
+        for forward_group in forward_group_list:
+            await bot.send_group_msg(group_id = forward_group,message = msg)
+        return
+
+
+#判定各BOSS圈数并获取预约表推送    
     num = 0
     for boss_info in res['boss_info']:
         lap_num = boss_info['lap_num']
@@ -189,17 +191,9 @@ async def teafak():
                     await bot.send_group_msg(group_id = gid,message = atmsg)
                 pre_push[num] = []
         num += 1
-        
+
+#获取出刀记录并推送最新的出刀        
     if res != 0:
-        #next_lap = res['lap_num']    #当前周目
-        # for side1 in side:          #计算面数
-        #     if next_lap > side1:
-        #         next_lap_1 = side[side1]
-        #     else:
-        #         break
-        # if curr_side != next_lap_1:
-        #     curr_side = next_lap_1
-        #     msg += f'[CQ:at,qq=all]当前到达{curr_side}面，注意调整出刀阵容!'
         history = reversed(res['damage_history'])   #从返回的出刀记录刀的状态
         clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
         clan_id = clan_info['clan']['detail']['clan_id']
@@ -230,12 +224,7 @@ async def teafak():
                 is_auto_r = '自动刀'
             else:
                 is_auto_r = '手动刀'
-            # if boss == 5:   #下一圈和下一个boss逻辑，反正要改会战了，凑合用着
-            #     next_boss = 1
-            #     next_lap = lap + 1
-            # else:
-            #     next_boss = boss + 1
-            #     next_lap = lap
+
             ifkill = ''     #击杀变成可读
             if kill == 1:
                 ifkill = '并击破'
@@ -246,6 +235,7 @@ async def teafak():
                 file.write(str(output)+'\n')
                 file.close()
 
+#记录实战人数变动并推送
         change = False
         for num in range(0,5):  
             boss_info2 = await client.callapi('/clan_battle/boss_info', {'clan_id': clan_id, 'clan_battle_id': clan_battle_id, 'lap_num': boss_status[num], 'order_num': num+1}) 
