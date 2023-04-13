@@ -123,6 +123,7 @@ curr_side = '_'
 @sv.scheduled_job('interval', seconds=20)
 async def teafak():
     global coin,arrow_rec,side,curr_side,arrow,sw,pre_push,fnum,forward_group_list,boss_status,in_game
+    load_index = 0
     if sw == 0:     #会战推送开关
         return
     if coin == 0:   #初始化获取硬币数
@@ -154,17 +155,18 @@ async def teafak():
 
 
 #判定是否处于会战期间    
-    is_interval = load_index['clan_battle']['is_interval']
-    if is_interval == 1:
-        mode_change_open = load_index['clan_battle']['mode_change_limit_start_time']
-        mode_change_open = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(mode_change_open))
-        mode_change_limit = load_index['clan_battle']['mode_change_limit_time']
-        mode_change_limit = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(mode_change_limit))
-        msg = f'当前会战未开放，请在会战前一天初始化会战推送\n会战模式可切换时间{mode_change_open}-{mode_change_limit}'
-        sw = 0
-        for forward_group in forward_group_list:
-            await bot.send_group_msg(group_id = forward_group,message = msg)
-        return
+    if load_index != 0:
+        is_interval = load_index['clan_battle']['is_interval']
+        if is_interval == 1:
+            mode_change_open = load_index['clan_battle']['mode_change_limit_start_time']
+            mode_change_open = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(mode_change_open))
+            mode_change_limit = load_index['clan_battle']['mode_change_limit_time']
+            mode_change_limit = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(mode_change_limit))
+            msg = f'当前会战未开放，请在会战前一天初始化会战推送\n会战模式可切换时间{mode_change_open}-{mode_change_limit}'
+            sw = 0
+            for forward_group in forward_group_list:
+                await bot.send_group_msg(group_id = forward_group,message = msg)
+            return
 
 
 #判定各BOSS圈数并获取预约表推送    
