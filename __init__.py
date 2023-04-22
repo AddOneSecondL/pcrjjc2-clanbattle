@@ -81,9 +81,6 @@ bclient = bsdkclient(acinfo, captchaVerifier, errlogger)
 client = pcrclient(bclient)
 
 qlck = Lock()
-usually_status = []
-reward_list = []
-mtdict = {}
 
 async def verify():     #验证登录状态
     if validating:
@@ -107,6 +104,7 @@ in_game = [0,0,0,0,0]
 pre_push = [[],[],[],[],[]]
 coin = 0
 arrow = 0
+tvid = 0
 sw = 0      #会战推送开关
 fnum = 0
 arrow_rec = 0
@@ -120,9 +118,23 @@ side = {
 }
 curr_side = '_'
 
+# @sv.on_fullmatch('fffff')
+# async def test2(bot,ev):
+#     item_list = {}
+#     await verify()
+#     load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})   #获取会战币api
+#     for item in load_index["item_list"]:
+#         item_list[item["id"]] = item["stock"]
+#     coin = item_list[90006]
+#     clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
+#     clan_id = clan_info['clan']['detail']['clan_id']
+#     res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
+#     print(res)
+
+
 @sv.scheduled_job('interval', seconds=20)
 async def teafak():
-    global coin,arrow_rec,side,curr_side,arrow,sw,pre_push,fnum,forward_group_list,boss_status,in_game
+    global coin,arrow_rec,side,curr_side,arrow,sw,pre_push,fnum,forward_group_list,boss_status,in_game,tvid
     load_index = 0
     if sw == 0:     #会战推送开关
         return
@@ -130,6 +142,8 @@ async def teafak():
         item_list = {}
         await verify()
         load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})   #获取会战币api
+        if tvid == 0:
+            tvid =load_index['user_info']['viewer_id']
         for item in load_index["item_list"]:
             item_list[item["id"]] = item["stock"]
         coin = item_list[90006]
@@ -154,7 +168,7 @@ async def teafak():
             pass
 
 
-#判定是否处于会战期间    
+#判定是否处于会战期间
     if load_index != 0:
         is_interval = load_index['clan_battle']['is_interval']
         if is_interval == 1:
@@ -231,8 +245,27 @@ async def teafak():
             if kill == 1:
                 ifkill = '并击破'
                 #push = True
-            msg += f'[{curr_side}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}({is_auto_r})\n'
-            output = f'{day},{hour},{minu},{seconds},{arrow},{name},{vid},{lap},{boss},{damage},{kill},{enemy_id},{clan_battle_id},{is_auto}'  #记录出刀，后面要用
+            
+            
+            timeline = await client.callapi('/clan_battle/battle_log_list', {'clan_battle_id': clan_battle_id, 'order_num': 0, 'phases': [1, 2, 3, 4, 5], 'report_types': [1], 'hide_same_units': 0, 'favorite_ids': [], 'sort_type': 1, 'page': 1})
+            timeline_list = timeline['battle_list']
+            #print(timeline_list)
+            start_time = 0
+            used_time = 0
+            for tl in timeline_list:
+                if tl['battle_end_time'] == ctime:
+                    blid1 = tl['battle_log_id']
+                    tvid = tl['target_viewer_id']
+                    print(blid1)
+                    blid = await client.callapi('/clan_battle/timeline_report', {'target_viewer_id': tvid, 'clan_battle_id': clan_battle_id, 'battle_log_id': int(blid1)})
+                    start_time = blid['start_remain_time']
+                    used_time = blid['battle_time']
+            if start_time == 90:
+                battle_type = f'初始刀{used_time}s'
+            else:
+                battle_type = f'补偿刀{used_time}s'
+            msg += f'[{curr_side}-{battle_type}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}({is_auto_r})\n'
+            output = f'{day},{hour},{minu},{seconds},{arrow},{name},{vid},{lap},{boss},{damage},{kill},{enemy_id},{clan_battle_id},{is_auto},{start_time},{used_time},'  #记录出刀，后面要用
             with open(current_folder+"/Output.txt","a",encoding='utf-8') as file:   
                 file.write(str(output)+'\n')
                 file.close()
@@ -537,22 +570,20 @@ async def status(bot,ev):
                 re_kill = int(line[10])
                 re_boss_id = int(line[11])
                 re_clan_battle_id = int(line[12])
+                re_is_auto = int(line[13])
+                re_start_time = int(line[14])
+                re_battle_time = int(line[15])
                 if_today = False
                 if ((day == today and hour >= 5) or (day == today + 1 and hour < 5)) and (re_clan_battle_id == clan_battle_id):
                     if_today = True
                 if int(vid) == int(re_vid) and if_today == True:
-                    if re_kill == 0 and kill_sign == 0:
+                    if re_start_time == 90 and re_kill == 1:
+                        kill_acc += 0.5
+                    elif re_start_time == 90 and re_kill == 0:
                         kill_acc += 1
-                        kill_sign = 0
-                    elif re_kill == 0 and kill_sign == 1:
+                    else:
                         kill_acc += 0.5
-                        kill_sign = 0
-                    elif re_kill == 1 and kill_sign == 0:
-                        kill_acc += 0.5
-                        kill_sign = 1
-                    elif re_kill == 1 and kill_sign == 1:
-                        kill_acc += 0.5
-                        kill_sign = 0
+
         
         if kill_acc == 0:
             draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#FF0000")
