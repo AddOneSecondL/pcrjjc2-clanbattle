@@ -331,9 +331,8 @@ async def preload(bot , ev):
                     pp1 = ev.user_id
                     name = ''
                     try:
-                        info = await bot.get_stranger_info(self_id=ev.self_id, user_id=pp1)
-                        name = info['nickname'] or pp1
-                        name = util.filt_message(name)
+                        info = await bot.get_group_member_info(group_id=ev.group_id, user_id=pp1)
+                        name = info['card'] or pp1
                     except CQHttpError as e:
                         print('error name')
                         pass
@@ -362,11 +361,11 @@ async def sw_plist(bot , ev):
             pp = pp.split('|')
             print(pp)
             pp1 = int(pp[0])
+            pp2 = int(pp[1])
             
             try:
-                info = await bot.get_stranger_info(self_id=ev.self_id, user_id=pp1)
-                name = info['nickname'] or pp1
-                name = util.filt_message(name)
+                info = await bot.get_group_member_info(group_id=pp2, user_id=pp1)
+                name = info['card'] or pp1
             except CQHttpError as e:
                 print('error name')
                 pass
