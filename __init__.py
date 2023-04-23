@@ -215,10 +215,16 @@ async def teafak():
         clan_id = clan_info['clan']['detail']['clan_id']
         pre_clan_battle_id = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
         #print(res)
-        
+        if arrow == 0:
+            for line in open(current_folder + "/Output.txt",encoding='utf-8'):
+                if line != '':
+                    line = line.split(',')
+                    arrow = int(line[4])
+                    print(arrow)
+            #file.close()
         clan_battle_id = pre_clan_battle_id['clan_battle_id']
         for hst in history:
-            if (arrow != 0) and (hst['history_id'] <= arrow):   #记录刀ID防止重复
+            if (arrow != 0) and (int(hst['history_id']) <= int(arrow)):   #记录刀ID防止重复
                 continue
                 
             name = hst['name']  #名字
@@ -247,7 +253,7 @@ async def teafak():
                 #push = True
             
             
-            timeline = await client.callapi('/clan_battle/battle_log_list', {'clan_battle_id': clan_battle_id, 'order_num': 0, 'phases': [1, 2, 3, 4, 5], 'report_types': [1], 'hide_same_units': 0, 'favorite_ids': [], 'sort_type': 1, 'page': 1})
+            timeline = await client.callapi('/clan_battle/battle_log_list', {'clan_battle_id': clan_battle_id, 'order_num': boss, 'phases': [1, 2, 3, 4, 5], 'report_types': [1], 'hide_same_units': 0, 'favorite_ids': [], 'sort_type': 2, 'page': 1})
             timeline_list = timeline['battle_list']
             #print(timeline_list)
             start_time = 0
@@ -280,7 +286,7 @@ async def teafak():
                 change = True
         if change == True:
             msg += f'当前实战人数发生变化:\n[{in_game[0]}][{in_game[1]}][{in_game[2]}][{in_game[3]}][{in_game[4]}]'
-        
+
         if msg != '':
             if len(msg)>200:
                 msg = '...\n' + msg[-200:] 
@@ -557,6 +563,7 @@ async def status(bot,ev):
         img4 = Image.new('RGB', (12, 17), "red")
         #img5 = Image.new('RGB', (25, 17), "green")
         time_sign = 0
+        half_sign = 0
         for line in open(current_folder + "/Output.txt",encoding='utf-8'):
             if line != '':
                 line = line.split(',')
@@ -577,46 +584,57 @@ async def status(bot,ev):
                 if_today = False
                 if ((day == today and hour >= 5) or (day == today + 1 and hour < 5)) and (re_clan_battle_id == clan_battle_id):
                     if_today = True
+                
                 if int(vid) == int(re_vid) and if_today == True:
                     if re_start_time == 90 and re_kill == 1:
                         if time_sign >= 1:
                             time_sign -= 1
-                        if re_battle_time <= 20:
+                            half_sign -= 0.5
+                            kill_acc += 0.5
+                            continue
+                        if re_battle_time <= 20 and re_battle_time != 0:
                             time_sign += 1
                         kill_acc += 0.5
+                        half_sign += 0.5
                     elif re_start_time == 90 and re_kill == 0:
                         if time_sign >= 1:
                             kill_acc += 0.5
                             time_sign -= 1
+                            half_sign -= 0.5
                             continue
                         kill_acc += 1
                     else:
                         kill_acc += 0.5
-
+                        half_sign -= 0.5
+                
         all_battle_count += kill_acc
+        
         if kill_acc == 0:
             draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#FF0000")
         elif 0< kill_acc < 3:
             draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#FF00FF")
         elif kill_acc == 3:
             draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#00FF00")
-        
+        #print(half_sign)
         width2 = 0
+        kill_acc = kill_acc - half_sign
+        
         while kill_acc-1 >=0:
             img.paste(img3, (130+int(149.5*width)+30*width2, 785+60*row))
             kill_acc -= 1
             width2 += 1
-        if kill_acc == 0.5:
+        while half_sign-0.5 >=0:
             img.paste(img4, (130+int(149.5*width)+30*width2, 785+60*row))
-            kill_acc -= 0.5
+            half_sign -= 0.5
+            width2 += 1
         #draw.text((132+149*width, 781+60*row), f'{kill_acc}', font=setFont, fill="#A020F0")
         width += 1
         if width == 6:
             width = 0
             row += 1    
-            
+    #file.close()
     count_m = len(res2['clan']['members'])*3        
-    draw.text((1000,780), f'今日已出{all_battle_count}刀/{count_m}刀', font=setFont, fill="#A020F0")    
+    draw.text((1000,780), f'今日已出{all_battle_count}刀/{count_m}刀', font=setFont, fill="#A020F0")
     #第三部分
     if res != 0:
         
