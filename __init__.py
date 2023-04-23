@@ -192,7 +192,7 @@ async def teafak():
             msg += f'全新的{lap_num}周目{num+1}王来了！'
             push_list = pre_push[num]
             if push_list != []:     #预约后群内和行会内提醒
-                chat_content = f'{next_lap}周目{next_boss}王已被预约，请耐心等候！'
+                chat_content = f'{lap_num}周目{next_boss}王已被预约，请耐心等候！'
                 try:
                     await verify()
                     await client.callapi('/clan/chat', {'clan_id': clan_id, 'type': 0, 'message': chat_content})
@@ -203,7 +203,7 @@ async def teafak():
                     pu = pu.split('|')
                     uid = int(pu[0])
                     gid = int(pu[1])
-                    atmsg = f'提醒：已到{next_lap}周目 {next_boss} 王！请注意沟通上一尾刀~\n[CQ:at,qq={uid}]'
+                    atmsg = f'提醒：已到{lap_num}周目 {next_boss} 王！请注意沟通上一尾刀~\n[CQ:at,qq={uid}]'
                     await bot.send_group_msg(group_id = gid,message = atmsg)
                 pre_push[num] = []
         num += 1
