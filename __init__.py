@@ -280,7 +280,7 @@ async def teafak():
                 change = True
         if change == True:
             msg += f'当前实战人数发生变化:\n[{in_game[0]}][{in_game[1]}][{in_game[2]}][{in_game[3]}][{in_game[4]}]'
-
+        
         if msg != '':
             if len(msg)>200:
                 msg = '...\n' + msg[-200:] 
@@ -556,6 +556,7 @@ async def status(bot,ev):
         img3 = Image.new('RGB', (25, 17), "white")
         img4 = Image.new('RGB', (12, 17), "red")
         #img5 = Image.new('RGB', (25, 17), "green")
+        time_sign = 0
         for line in open(current_folder + "/Output.txt",encoding='utf-8'):
             if line != '':
                 line = line.split(',')
@@ -578,8 +579,16 @@ async def status(bot,ev):
                     if_today = True
                 if int(vid) == int(re_vid) and if_today == True:
                     if re_start_time == 90 and re_kill == 1:
+                        if time_sign >= 1:
+                            time_sign -= 1
+                        if re_battle_time <= 20:
+                            time_sign += 1
                         kill_acc += 0.5
                     elif re_start_time == 90 and re_kill == 0:
+                        if time_sign >= 1:
+                            kill_acc += 0.5
+                            time_sign -= 1
+                            continue
                         kill_acc += 1
                     else:
                         kill_acc += 0.5
