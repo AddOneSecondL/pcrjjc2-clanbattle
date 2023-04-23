@@ -523,6 +523,7 @@ async def status(bot,ev):
     setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 20)
     last_rank = res2['last_total_ranking']
     draw.text((1320, 320), f'上期排名:{last_rank}', font=setFont, fill="#A020F0")
+    all_battle_count = 0
     for members in res2['clan']['members']:
         vid = members['viewer_id']
         name = members['name']
@@ -592,7 +593,7 @@ async def status(bot,ev):
                     else:
                         kill_acc += 0.5
 
-        
+        all_battle_count += kill_acc
         if kill_acc == 0:
             draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#FF0000")
         elif 0< kill_acc < 3:
@@ -614,7 +615,8 @@ async def status(bot,ev):
             width = 0
             row += 1    
             
-    
+    count_m = len(res2['clan']['members'])*3        
+    draw.text((1000,780), f'今日已出{all_battle_count}刀/{count_m}刀', font=setFont, fill="#A020F0")    
     #第三部分
     if res != 0:
         
