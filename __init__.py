@@ -272,6 +272,10 @@ async def teafak():
                 battle_type = f'初始刀{used_time}s'
             else:
                 battle_type = f'补偿刀{used_time}s'
+            for st in side:
+                if lap >= st:
+                    cur_side = st
+            cur_side = side[cur_side]
             msg += f'[{curr_side}-{battle_type}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}({is_auto_r})\n'
             output = f'{day},{hour},{minu},{seconds},{arrow},{name},{vid},{lap},{boss},{damage},{kill},{enemy_id},{clan_battle_id},{is_auto},{start_time},{used_time},'  #记录出刀，后面要用
             with open(current_folder+"/Output.txt","a",encoding='utf-8') as file:   
@@ -501,8 +505,28 @@ async def status(bot,ev):
         # 绘制半透明背景
         bg = Image.new('RGBA', (bg_width, bg_height), bg_color)
         img.paste(bg, (160, 38+(boss_num-1)*142), bg)
+        bg_width = 200
+        stage_color = {
+            1: 'green',
+            4: 'yellow',
+            11: 'blue',
+            35: 'purple',
+            45: 'red'
+        }
+        for st in side:
+            if boss_lap_num >= st:
+                cur_stage = st
+        cur_stage = side[cur_stage]
+        for st in stage_color:
+            if boss_lap_num >= st:
+                bg_color = st
+        bg_color = stage_color[bg_color]
+        bg = Image.new('RGBA', (bg_width, bg_height), bg_color)
+        img.paste(bg, (500, 38+(boss_num-1)*142), bg)
         setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 25)
         draw.text((160, 40+(boss_num-1)*142), f'{format_number_with_commas(hp)}/{format_number_with_commas(mhp)}', font=setFont, fill="#FFFFFF")
+        draw.text((500, 40+(boss_num-1)*142), f'{cur_stage}面 {boss_lap_num}周目', font=setFont, fill="#FFFFFF")
+
         
         
         pre = pre_push[boss_num-1]
