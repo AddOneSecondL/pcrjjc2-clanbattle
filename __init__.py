@@ -682,7 +682,7 @@ async def status(bot,ev):
                     #push = True
                 msg = f'[{day}日{hour:02}:{minu:02}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}'
                 if kill == 1:
-                    draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="limegreen")
+                    draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="black")
                 else:
                     draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="purple")
                 if order == 1:
