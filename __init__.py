@@ -4,7 +4,7 @@ import json
 import requests
 import base64
 from nonebot import get_bot, on_command
-from hoshino import priv
+from hoshino import priv, R
 from hoshino.typing import NoticeSession, MessageSegment, CQHttpError
 from .pcrclient import pcrclient, ApiException, bsdkclient
 from asyncio import Lock
