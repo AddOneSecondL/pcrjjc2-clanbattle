@@ -276,7 +276,7 @@ async def teafak():
                 if lap >= st:
                     cur_side = st
             cur_side = side[cur_side]
-            msg += f'[{curr_side}-{battle_type}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}({is_auto_r})\n'
+            msg += f'[{cur_side}-{battle_type}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}({is_auto_r})\n'
             output = f'{day},{hour},{minu},{seconds},{arrow},{name},{vid},{lap},{boss},{damage},{kill},{enemy_id},{clan_battle_id},{is_auto},{start_time},{used_time},'  #记录出刀，后面要用
             with open(current_folder+"/Output.txt","a",encoding='utf-8') as file:   
                 file.write(str(output)+'\n')
