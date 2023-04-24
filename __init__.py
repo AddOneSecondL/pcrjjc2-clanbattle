@@ -427,7 +427,15 @@ async def status(bot,ev):
     #try:
     await bot.send(ev,'生成中...')
     ##第一部分
-    img = Image.open(img_file+'/cbt.png')
+    
+    for root_, dirs_, files_ in os.walk(img_file+'/bg'):
+        bg = files_
+    bgnum = random.randint(0, len(bg)-1)
+    img = Image.open(img_file+'/bg/'+bg[bgnum])
+    img = img.resize((1920,1080),Image.ANTIALIAS)
+        
+    front_img = Image.open(img_file+'/cbt.png')
+    img.paste(front_img, (0,0),front_img) 
     draw = ImageDraw.Draw(img)
     setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 40)
     await verify()
@@ -674,7 +682,7 @@ async def status(bot,ev):
                     #push = True
                 msg = f'[{day}日{hour:02}:{minu:02}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}'
                 if kill == 1:
-                    draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="yellow")
+                    draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="limegreen")
                 else:
                     draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="purple")
                 if order == 1:
