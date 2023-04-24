@@ -189,7 +189,7 @@ async def teafak():
         lap_num = boss_info['lap_num']
         if lap_num != boss_status[num]:
             boss_status[num] = lap_num
-            msg += f'全新的{lap_num}周目{num+1}王来了！'
+            #msg += f'全新的{lap_num}周目{num+1}王来了！'
             push_list = pre_push[num]
             if push_list != []:     #预约后群内和行会内提醒
                 chat_content = f'{lap_num}周目{num+1}王已被预约，请耐心等候！'
@@ -219,8 +219,9 @@ async def teafak():
             for line in open(current_folder + "/Output.txt",encoding='utf-8'):
                 if line != '':
                     line = line.split(',')
-                    arrow = int(line[4])
-                    print(arrow)
+                    if line[0] != 'SL':
+                        arrow = int(line[4])
+                        print(arrow)
             #file.close()
         clan_battle_id = pre_clan_battle_id['clan_battle_id']
         for hst in history:
@@ -387,7 +388,7 @@ async def cle(bot , ev):
 @sv.on_fullmatch('会战帮助')
 async def chelp(bot , ev): 
     # msg = '[查轴[A/B/C/D/E][S/T/TS][1/2/3/4/5][ID]]:查轴，中括号内为选填项，可叠加使用。*S/T/TS分别表示手动/自动/半自动*\n[分刀[A/B/C/D/E][毛分/毛伤][S/T/TS][1/2/3/4/5]]:根据box分刀，中括号内为选填项，可叠加使用。*可选择限定boss，如123代表限定123王*\n[(添加/删除)(角色/作业)黑名单 + 名称或ID]:支持多角色，例如春环环奈，无空格。作业序号：花舞作业的序号，如‘A101’\n[(添加/删除)角色缺失 + 角色名称]:支持多角色，例如春环环奈，无空格\n[查看(作业黑名单/角色缺失/角色黑名单)]\n[清空(作业黑名单/角色缺失/角色黑名单)]\n[切换会战推送]:打开/关闭会战推送\n[会战预约(1/2/3/4/5)]:预约提醒\n[会战表]:查看所有预约\n[编写中...][会战查刀(ID)]:查看出刀详情\n[查档线]:若参数为空，则输出10000名内各档档线；若有多个参数，请使用英文逗号隔开。\n[清空预约表]:(仅SU可用)\n'
-    msg = '[查档线]:若参数为空，则输出10000名内各档档线；若有多个参数，请使用英文逗号隔开。新增按照关键词查档线。结算期间数据为空\n[初始化会战推送]:会战前一天输入这个，记得清空Output.txt内的内容，不要删除Output.txt\n[切换会战推送]:打开/关闭会战推送\n[会战预约(1/2/3/4/5)]:预约提醒\n[会战表]:查看所有预约\n[清空预约表]:(仅SU可用)\n'
+    msg = '[查档线]:若参数为空，则输出10000名内各档档线；若有多个参数，请使用英文逗号隔开。新增按照关键词查档线。结算期间数据为空\n[初始化会战推送]:会战前一天输入这个，记得清空Output.txt内的内容，不要删除Output.txt\n[切换会战推送]:打开/关闭会战推送\n[会战预约(1/2/3/4/5)]:预约提醒\n[会战表]:查看所有预约\n[清空预约表]:(仅SU可用)\nsl + 关键ID:为玩家打上SL标记'
     await bot.send(ev,msg)
 
 
@@ -572,28 +573,43 @@ async def status(bot,ev):
         #img5 = Image.new('RGB', (25, 17), "green")
         time_sign = 0
         half_sign = 0
+        sl_sign = 0
         for line in open(current_folder + "/Output.txt",encoding='utf-8'):
             if line != '':
                 line = line.split(',')
-                day = int(line[0])
-                hour = int(line[1])
-                re_battle_id = int(line[4])
-                re_name = line[5]
-                re_vid = line[6]
-                re_lap = int(line[7])
-                re_boss = int(line[8])
-                re_dmg = int(line[9])
-                re_kill = int(line[10])
-                re_boss_id = int(line[11])
-                re_clan_battle_id = int(line[12])
-                re_is_auto = int(line[13])
-                re_start_time = int(line[14])
-                re_battle_time = int(line[15])
+                print(line[0])
+                if line[0] == 'SL':
+                    mode = 1
+                    re_vid = int(line[2])
+                    day = int(line[3])
+                    hour = int(line[4])
+                else:
+                    mode = 2
+                    day = int(line[0])
+                    hour = int(line[1])
+                    re_battle_id = int(line[4])
+                    re_name = line[5]
+                    re_vid = line[6]
+                    re_lap = int(line[7])
+                    re_boss = int(line[8])
+                    re_dmg = int(line[9])
+                    re_kill = int(line[10])
+                    re_boss_id = int(line[11])
+                    re_clan_battle_id = int(line[12])
+                    re_is_auto = int(line[13])
+                    re_start_time = int(line[14])
+                    re_battle_time = int(line[15])
                 if_today = False
-                if ((day == today and hour >= 5) or (day == today + 1 and hour < 5)) and (re_clan_battle_id == clan_battle_id):
+                if ((day == today and hour >= 5) or (day == today + 1 and hour < 5)) and (re_clan_battle_id == clan_battle_id) and mode == 2:
+                    if_today = True
+                if ((day == today and hour >= 5) or (day == today + 1 and hour < 5)) and mode == 1:
                     if_today = True
                 
-                if int(vid) == int(re_vid) and if_today == True:
+                
+                if if_today == True and mode == 1 and int(vid) == int(re_vid):
+                    sl_sign = 1
+                
+                if int(vid) == int(re_vid) and if_today == True and mode == 2:
                     if re_start_time == 90 and re_kill == 1:
                         if time_sign >= 1:
                             time_sign -= 1
@@ -636,6 +652,8 @@ async def status(bot,ev):
             half_sign -= 0.5
             width2 += 1
         #draw.text((132+149*width, 781+60*row), f'{kill_acc}', font=setFont, fill="#A020F0")
+        if sl_sign == 1:
+            draw.text((130+int(149.5*width), 785+60*row), f'SL', font=setFont, fill="black")
         width += 1
         if width == 6:
             width = 0
@@ -730,6 +748,76 @@ async def status(bot,ev):
     # except:
     #     await bot.send(ev,'发生不可预料的错误，请重试')
     #     pass
+
+    
+@sv.on_prefix('sl')     
+async def sl(bot,ev):
+    usrname = ev.message.extract_plain_text().strip()
+    if usrname == '':
+        # pp1 = ev.user_id
+        # try:
+        #     info = await bot.get_group_member_info(group_id=ev.group_id, user_id=pp1)
+        #     usrname = info['card'] or pp1
+        # except CQHttpError as e:
+        #     print('error name')
+        #     pass      
+        await bot.send(ev,'由于不进行绑定，请输入一个游戏内的ID辨识(关键词搜索)')
+        return
+    else:
+        #try:
+        await verify()
+        res2 = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 1})
+        search_sign = 0
+        vid0 = 0
+        for members in res2['clan']['members']:
+            vid = members['viewer_id']
+            name = str(members['name'])
+            
+            if (usrname == name) or (usrname in name):
+                usrname = name
+                todayt = time.localtime()
+                hourh = todayt[3]
+                monm = todayt[1]
+                today = 0
+                if hourh < 5:
+                    today = todayt[2]-1
+                else:
+                    today = todayt[2]
+                for line in open(current_folder + "/Output.txt",encoding='utf-8'):
+                    if line != '':
+                        line = line.split(',')
+                        if line[0] == 'SL':
+                            name2 = line[1]
+                            vid0 = int(line[2])
+                            day = int(line[3])
+                            hour = int(line[4])
+                            minu = int(line[5])
+                            seconds = int(line[6])
+                            mon = line[7]
+                            if (name2 == name) and (((day == today and hour >= 5) or (day == today + 1 and hour < 5))):
+                                await bot.send(ev,f'({name})已于{hour}:{minu}进行过SL操作！')
+                                return
+                vid0 = vid
+                search_sign = 1
+                break
+        if search_sign == 1:
+            real_time = time.localtime()
+            mon = real_time[1]
+            day = real_time[2]  #垃圾代码
+            hour = real_time[3]
+            minu = real_time[4]
+            seconds = real_time[5]
+            output = f'SL,{usrname},{vid0},{day},{hour},{minu},{seconds},{mon},'
+            with open(current_folder+"/Output.txt","a",encoding='utf-8') as file:   
+                file.write(str(output)+'\n')
+                file.close()
+            await bot.send(ev,f'{name}({vid0})已上报SL')
+        else:
+            await bot.send(ev,'没有找到这个ID，请确认')
+            return
+        # except:
+        #     await bot.send(ev,'发生连接错误，请重试')
+        #     pass
 
 def p2ic2b64(img, quality=90):
     # 如果图像模式为RGBA，则将其转换为RGB模式
