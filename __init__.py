@@ -3,6 +3,7 @@ from io import BytesIO
 import json
 import requests
 import base64
+import random
 from nonebot import get_bot, on_command
 from hoshino import priv, R
 from hoshino.typing import NoticeSession, MessageSegment, CQHttpError
