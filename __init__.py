@@ -809,14 +809,13 @@ async def get_battle_status(bot,ev):
     num = 0
     max_page = 0
     battle_history_list = []
+    l1h = [[6000000,8000000,10000000,12000000,15000000],[6000000,8000000,10000000,12000000,15000000],[7000000,9000000,13000000,15000000,20000000],[17000000,18000000,20000000,21000000,23000000],[85000000,90000000,95000000,100000000,110000000]]
     while(day_sign == 0):
         num += 1
-        
         timeline = await client.callapi('/clan_battle/battle_log_list', {'clan_battle_id': clan_battle_id, 'order_num': 0, 'phases': [1,2,3,4,5], 'report_types': [1], 'hide_same_units': 0, 'favorite_ids': [], 'sort_type': 3, 'page': num})
         if max_page == 0:
             max_page = timeline['max_page']
         max_page1 = timeline['max_page']
-        print(f'{max_page}|{max_page1}')
         if max_page1 < max_page:
             day_sign = 1
         for tl in timeline['battle_list']:
@@ -825,32 +824,57 @@ async def get_battle_status(bot,ev):
             ordern_num = tl['order_num']
             lap_num = tl['lap_num']
             battle_end_time = tl['battle_end_time']
+            damage = tl['total_damage']
             usrname = tl['user_name']
             hr = time.localtime(battle_end_time)
             day = hr[2]
             hour = hr[3]
             if (day == today and hour >= 5) or (day == today + 1 and hour < 5):
-                battle_history_list.append([tvid,log_id,usrname])
+                battle_history_list.append([tvid,log_id,usrname,ordern_num,lap_num,damage])
             if (day < today):
                 day_sign = 1
+
+    
     for log in battle_history_list:
+        extra_back = 0
         tvid = log[0]
         log_id = log[1]
         usrname = log[2]
+        ordern_num = log[3]
+        lap_num = log[4]
+        damage = log[5]
+        total_dmg = 0
+        tvid3 = 0
+        for log2 in battle_history_list:
+            tvid2 = log2[0]
+            ordern_num2 = log2[3]
+            lap_num2 = log2[4]
+            damage2 = log2[5]
+            if ordern_num == ordern_num2 and lap_num == lap_num2:
+                if tvid3 == 0:
+                    tvid3 = tvid2
+                total_dmg += damage2
+        for st in phase:
+            if lap_num >= st:
+                cur_side = st
+        cur_side = phase[cur_side]
+        if total_dmg > l1h[cur_side-1][ordern_num-1] and (int(tvid3) == int(tvid)):
+            extra_back = 1
+
+
         blid = await client.callapi('/clan_battle/timeline_report', {'target_viewer_id': tvid, 'clan_battle_id': clan_battle_id, 'battle_log_id': int(log_id)})
         start_time = blid['start_remain_time']
         used_time = blid['battle_time']
         for tl in blid['timeline']:
             if tl['is_battle_finish'] == 1:
                 remain_time = tl['remain_time']
-                if remain_time != 0:
+                if remain_time != 0 or extra_back == 1:
                     kill = 1
                 else:
                     kill = 0
         log.append(start_time)
         log.append(used_time)
         log.append(kill)
-        #print(blid)
     res2 = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 1})
     #lack_list = []
     msg = ''
@@ -862,9 +886,9 @@ async def get_battle_status(bot,ev):
         kill_acc = 0
         for log in battle_history_list:
             if log[0] == vid:
-                start_time = log[3]
-                used_time = log[4]
-                kill = log[5]
+                start_time = log[6]
+                used_time = log[7]
+                kill = log[8]
                 if start_time == 90 and kill == 1:
                     if time_sign >= 1:
                         time_sign -= 1
