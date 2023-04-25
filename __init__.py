@@ -234,7 +234,7 @@ async def teafak():
             #file.close()
         clan_battle_id = pre_clan_battle_id['clan_battle_id']
         for hst in history:
-            if (arrow != 0) and (int(hst['history_id']) > int(arrow)):   #记录刀ID防止重复
+            if ((arrow != 0) and (int(hst['history_id']) > int(arrow))) or (arrow == 0):   #记录刀ID防止重复
                 name = hst['name']  #名字
                 vid = hst['viewer_id']  #13位ID
                 kill = hst['kill']  #是否击杀
@@ -438,7 +438,6 @@ async def cout(bot , ev):
 
 @sv.on_fullmatch('会战状态')    #这个更是重量级
 async def status(bot,ev):
-    #boss_ooo = [305700,302000,300602,304101,300100]
     #try:
     await bot.send(ev,'生成中...')
     ##第一部分
@@ -893,6 +892,9 @@ async def get_battle_status(bot,ev):
     
 @sv.on_prefix('sl')     
 async def sl(bot,ev):
+    if sw == 0:
+        await bot.send(ev,'未开启会战推送，无法sl')
+        return
     usrname = ev.message.extract_plain_text().strip()
     if usrname == '':
         # pp1 = ev.user_id
