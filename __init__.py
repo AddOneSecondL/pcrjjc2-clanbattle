@@ -783,6 +783,105 @@ async def status(bot,ev):
     #     await bot.send(ev,'发生不可预料的错误，请重试')
     #     pass
 
+@sv.on_prefix('抓人')
+async def get_battle_status(bot,ev):
+    msg = ev.message.extract_plain_text().strip()
+    if msg != '':
+        today = int(msg)
+    else:
+        todayt = time.localtime()
+        hourh = todayt[3]
+        today = 0
+        if hourh < 5:
+            today = todayt[2]-1
+        else:
+            today = todayt[2]      
+    await verify()
+    load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
+    clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
+    clan_id = clan_info['clan']['detail']['clan_id']
+    item_list = {}
+    for item in load_index["item_list"]:
+        item_list[item["id"]] = item["stock"]
+    coin = item_list[90006]   
+    res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
+    clan_battle_id = res['clan_battle_id']
+    day_sign = 0
+    num = 0
+    battle_history_list = []
+    while(day_sign == 0):
+        num += 1
+        timeline = await client.callapi('/clan_battle/battle_log_list', {'clan_battle_id': clan_battle_id, 'order_num': 0, 'phases': [1,2,3,4,5], 'report_types': [1], 'hide_same_units': 0, 'favorite_ids': [], 'sort_type': 3, 'page': num})
+        for tl in timeline['battle_list']:
+            tvid = tl['target_viewer_id']
+            log_id = tl['battle_log_id']
+            ordern_num = tl['order_num']
+            lap_num = tl['lap_num']
+            battle_end_time = tl['battle_end_time']
+            usrname = tl['user_name']
+            hr = time.localtime(battle_end_time)
+            day = hr[2]
+            hour = hr[3]
+            if (day == today and hour >= 5) or (day == today + 1 and hour < 5):
+                battle_history_list.append([tvid,log_id,usrname])
+            elif (day < today):
+                day_sign = 1
+    for log in battle_history_list:
+        tvid = log[0]
+        log_id = log[1]
+        usrname = log[2]
+        blid = await client.callapi('/clan_battle/timeline_report', {'target_viewer_id': tvid, 'clan_battle_id': clan_battle_id, 'battle_log_id': int(log_id)})
+        start_time = blid['start_remain_time']
+        used_time = blid['battle_time']
+        for tl in blid['timeline']:
+            if tl['is_battle_finish'] == 1:
+                remain_time = tl['remain_time']
+                if remain_time != 0:
+                    kill = 1
+                else:
+                    kill = 0
+        log.append(start_time)
+        log.append(used_time)
+        log.append(kill)
+        #print(blid)
+    res2 = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 1})
+    #lack_list = []
+    msg = ''
+    for members in res2['clan']['members']:
+        vid = members['viewer_id']
+        name = members['name']
+        time_sign = 0
+        half_sign = 0
+        kill_acc = 0
+        for log in battle_history_list:
+            if log[0] == vid:
+                start_time = log[3]
+                used_time = log[4]
+                kill = log[5]
+                if start_time == 90 and kill == 1:
+                    if time_sign >= 1:
+                        time_sign -= 1
+                        half_sign -= 0.5
+                        kill_acc += 0.5
+                        continue
+                    if used_time <= 20 and used_time != 0:
+                        time_sign += 1
+                    kill_acc += 0.5
+                    half_sign += 0.5
+                elif start_time == 90 and kill == 0:
+                    if time_sign >= 1:
+                        kill_acc += 0.5
+                        time_sign -= 1
+                        half_sign -= 0.5
+                        continue
+                    kill_acc += 1
+                else:
+                    kill_acc += 0.5
+                    half_sign -= 0.5
+        if kill_acc < 3:
+            msg += f'{name}缺少{3-kill_acc}刀\n'
+    if msg != '':
+        await bot.send(ev,msg)
     
 @sv.on_prefix('sl')     
 async def sl(bot,ev):
