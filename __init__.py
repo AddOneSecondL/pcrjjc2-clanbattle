@@ -808,10 +808,18 @@ async def get_battle_status(bot,ev):
     clan_battle_id = res['clan_battle_id']
     day_sign = 0
     num = 0
+    max_page = 0
     battle_history_list = []
     while(day_sign == 0):
         num += 1
+        
         timeline = await client.callapi('/clan_battle/battle_log_list', {'clan_battle_id': clan_battle_id, 'order_num': 0, 'phases': [1,2,3,4,5], 'report_types': [1], 'hide_same_units': 0, 'favorite_ids': [], 'sort_type': 3, 'page': num})
+        if max_page == 0:
+            max_page = timeline['max_page']
+        max_page1 = timeline['max_page']
+        print(f'{max_page}|{max_page1}')
+        if max_page1 < max_page:
+            day_sign = 1
         for tl in timeline['battle_list']:
             tvid = tl['target_viewer_id']
             log_id = tl['battle_log_id']
@@ -824,7 +832,7 @@ async def get_battle_status(bot,ev):
             hour = hr[3]
             if (day == today and hour >= 5) or (day == today + 1 and hour < 5):
                 battle_history_list.append([tvid,log_id,usrname])
-            elif (day < today):
+            if (day < today):
                 day_sign = 1
     for log in battle_history_list:
         tvid = log[0]
