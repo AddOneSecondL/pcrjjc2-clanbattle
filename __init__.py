@@ -117,6 +117,14 @@ side = {
     45: 'E'
     
 }
+phase = {
+    1: 1,
+    4: 2,
+    11: 3,
+    35: 4,
+    45: 5
+    
+}
 curr_side = '_'
 
 # @sv.on_fullmatch('fffff')
@@ -226,61 +234,62 @@ async def teafak():
             #file.close()
         clan_battle_id = pre_clan_battle_id['clan_battle_id']
         for hst in history:
-            if (arrow != 0) and (int(hst['history_id']) <= int(arrow)):   #记录刀ID防止重复
-                continue
+            if (arrow != 0) and (int(hst['history_id']) > int(arrow)):   #记录刀ID防止重复
+                name = hst['name']  #名字
+                vid = hst['viewer_id']  #13位ID
+                kill = hst['kill']  #是否击杀
+                damage = hst['damage']  #伤害
+                lap = hst['lap_num']    #圈数
+                boss = int(hst['order_num'])    #几号boss
+                ctime = hst['create_time']  #出刀时间
+                real_time = time.localtime(ctime)   
+                day = real_time[2]  #垃圾代码
+                hour = real_time[3]
+                minu = real_time[4]
+                seconds = real_time[5]
+                arrow = hst['history_id']   #记录指针
+                enemy_id = hst['enemy_id']  #BOSSID，暂时没找到用处
+                is_auto = hst['is_auto']
+                if is_auto == 1:
+                    is_auto_r = '自动刀'
+                else:
+                    is_auto_r = '手动刀'
+    
+                ifkill = ''     #击杀变成可读
+                if kill == 1:
+                    ifkill = '并击破'
+                    #push = True
                 
-            name = hst['name']  #名字
-            vid = hst['viewer_id']  #13位ID
-            kill = hst['kill']  #是否击杀
-            damage = hst['damage']  #伤害
-            lap = hst['lap_num']    #圈数
-            boss = int(hst['order_num'])    #几号boss
-            ctime = hst['create_time']  #出刀时间
-            real_time = time.localtime(ctime)   
-            day = real_time[2]  #垃圾代码
-            hour = real_time[3]
-            minu = real_time[4]
-            seconds = real_time[5]
-            arrow = hst['history_id']   #记录指针
-            enemy_id = hst['enemy_id']  #BOSSID，暂时没找到用处
-            is_auto = hst['is_auto']
-            if is_auto == 1:
-                is_auto_r = '自动刀'
-            else:
-                is_auto_r = '手动刀'
-
-            ifkill = ''     #击杀变成可读
-            if kill == 1:
-                ifkill = '并击破'
-                #push = True
-            
-            
-            timeline = await client.callapi('/clan_battle/battle_log_list', {'clan_battle_id': clan_battle_id, 'order_num': boss, 'phases': [1, 2, 3, 4, 5], 'report_types': [1], 'hide_same_units': 0, 'favorite_ids': [], 'sort_type': 2, 'page': 1})
-            timeline_list = timeline['battle_list']
-            #print(timeline_list)
-            start_time = 0
-            used_time = 0
-            for tl in timeline_list:
-                if tl['battle_end_time'] == ctime:
-                    blid1 = tl['battle_log_id']
-                    tvid = tl['target_viewer_id']
-                    print(blid1)
-                    blid = await client.callapi('/clan_battle/timeline_report', {'target_viewer_id': tvid, 'clan_battle_id': clan_battle_id, 'battle_log_id': int(blid1)})
-                    start_time = blid['start_remain_time']
-                    used_time = blid['battle_time']
-            if start_time == 90:
-                battle_type = f'初始刀{used_time}s'
-            else:
-                battle_type = f'补偿刀{used_time}s'
-            for st in side:
-                if lap >= st:
-                    cur_side = st
-            cur_side = side[cur_side]
-            msg += f'[{cur_side}-{battle_type}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}({is_auto_r})\n'
-            output = f'{day},{hour},{minu},{seconds},{arrow},{name},{vid},{lap},{boss},{damage},{kill},{enemy_id},{clan_battle_id},{is_auto},{start_time},{used_time},'  #记录出刀，后面要用
-            with open(current_folder+"/Output.txt","a",encoding='utf-8') as file:   
-                file.write(str(output)+'\n')
-                file.close()
+                for st in phase:
+                    if lap >= st:
+                        phases = st
+                phases = phase[phases]                
+                timeline = await client.callapi('/clan_battle/battle_log_list', {'clan_battle_id': clan_battle_id, 'order_num': boss, 'phases': [phases], 'report_types': [1], 'hide_same_units': 0, 'favorite_ids': [], 'sort_type': 3, 'page': 1})
+                timeline_list = timeline['battle_list']
+                #print(timeline_list)
+                start_time = 0
+                used_time = 0
+                for tl in timeline_list:
+                    if tl['battle_end_time'] == ctime:
+                        blid1 = tl['battle_log_id']
+                        tvid = tl['target_viewer_id']
+                        print(blid1)
+                        blid = await client.callapi('/clan_battle/timeline_report', {'target_viewer_id': tvid, 'clan_battle_id': clan_battle_id, 'battle_log_id': int(blid1)})
+                        start_time = blid['start_remain_time']
+                        used_time = blid['battle_time']
+                if start_time == 90:
+                    battle_type = f'初始刀{used_time}s'
+                else:
+                    battle_type = f'补偿刀{used_time}s'
+                for st in side:
+                    if lap >= st:
+                        cur_side = st
+                cur_side = side[cur_side]
+                msg += f'[{cur_side}-{battle_type}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}({is_auto_r})\n'
+                output = f'{day},{hour},{minu},{seconds},{arrow},{name},{vid},{lap},{boss},{damage},{kill},{enemy_id},{clan_battle_id},{is_auto},{start_time},{used_time},'  #记录出刀，后面要用
+                with open(current_folder+"/Output.txt","a",encoding='utf-8') as file:   
+                    file.write(str(output)+'\n')
+                    file.close()
 
 #记录实战人数变动并推送
         change = False
