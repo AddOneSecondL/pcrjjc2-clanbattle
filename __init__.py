@@ -144,171 +144,185 @@ curr_side = '_'
 @sv.scheduled_job('interval', seconds=20)
 async def teafak():
     global coin,arrow_rec,side,curr_side,arrow,sw,pre_push,fnum,forward_group_list,boss_status,in_game,tvid
-    load_index = 0
-    if sw == 0:     #会战推送开关
-        return
-    if coin == 0:   #初始化获取硬币数
-        item_list = {}
-        await verify()
-        load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})   #获取会战币api
-        if tvid == 0:
-            tvid =load_index['user_info']['viewer_id']
-        for item in load_index["item_list"]:
-            item_list[item["id"]] = item["stock"]
-        coin = item_list[90006]
-    msg = ''
-    ref = 0
-    res = 0
-    
-    while(ref == 0):
-        try:
-            await verify()
-            clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
-            clan_id = clan_info['clan']['detail']['clan_id']
-            res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
-            ref = 1
-        except:
-            await verify()
-            load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})   #击败BOSS时会战币会变动
+    try:
+        load_index = 0
+        if sw == 0:     #会战推送开关
+            return
+        if coin == 0:   #初始化获取硬币数
             item_list = {}
+            await verify()
+            load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})   #获取会战币api
+            if tvid == 0:
+                tvid =load_index['user_info']['viewer_id']
             for item in load_index["item_list"]:
                 item_list[item["id"]] = item["stock"]
             coin = item_list[90006]
-            pass
+        msg = ''
+        ref = 0
+        res = 0
+        
+        while(ref == 0):
+            try:
+                await verify()
+                clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
+                clan_id = clan_info['clan']['detail']['clan_id']
+                res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
+                ref = 1
+            except Exception as e:
+                if ('连接中断' or '发生了错误(E)') in str(e):
+                    for forward_group in forward_group_list:
+                        await bot.send_group_msg(group_id = forward_group,message = '连接中断，可能顶号，已自动关闭推送，请重新开启会战推送')
+                    sw = 0
+                    return
+                await verify()
+                load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})   #击败BOSS时会战币会变动
+                item_list = {}
+                for item in load_index["item_list"]:
+                    item_list[item["id"]] = item["stock"]
+                coin = item_list[90006]
+                pass
 
 
-#判定是否处于会战期间
-    if load_index != 0:
-        is_interval = load_index['clan_battle']['is_interval']
-        if is_interval == 1:
-            mode_change_open = load_index['clan_battle']['mode_change_limit_start_time']
-            mode_change_open = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(mode_change_open))
-            mode_change_limit = load_index['clan_battle']['mode_change_limit_time']
-            mode_change_limit = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(mode_change_limit))
-            msg = f'当前会战未开放，请在会战前一天初始化会战推送\n会战模式可切换时间{mode_change_open}-{mode_change_limit}'
+    #判定是否处于会战期间
+        if load_index != 0:
+            is_interval = load_index['clan_battle']['is_interval']
+            if is_interval == 1:
+                mode_change_open = load_index['clan_battle']['mode_change_limit_start_time']
+                mode_change_open = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(mode_change_open))
+                mode_change_limit = load_index['clan_battle']['mode_change_limit_time']
+                mode_change_limit = time.strftime("%Y-%m-%d %H:%M:%S",time.localtime(mode_change_limit))
+                msg = f'当前会战未开放，请在会战前一天初始化会战推送\n会战模式可切换时间{mode_change_open}-{mode_change_limit}'
+                sw = 0
+                for forward_group in forward_group_list:
+                    await bot.send_group_msg(group_id = forward_group,message = msg)
+                return
+
+
+    #判定各BOSS圈数并获取预约表推送    
+        num = 0
+        for boss_info in res['boss_info']:
+            lap_num = boss_info['lap_num']
+            if lap_num != boss_status[num]:
+                boss_status[num] = lap_num
+                #msg += f'全新的{lap_num}周目{num+1}王来了！'
+                push_list = pre_push[num]
+                if push_list != []:     #预约后群内和行会内提醒
+                    chat_content = f'{lap_num}周目{num+1}王已被预约，请耐心等候！'
+                    try:
+                        await verify()
+                        await client.callapi('/clan/chat', {'clan_id': clan_id, 'type': 0, 'message': chat_content})
+                    except:
+                        pass
+                    warn = ''
+                    for pu in push_list:
+                        pu = pu.split('|')
+                        uid = int(pu[0])
+                        gid = int(pu[1])
+                        atmsg = f'提醒：已到{lap_num}周目 {num+1} 王！请注意沟通上一尾刀~\n[CQ:at,qq={uid}]'
+                        await bot.send_group_msg(group_id = gid,message = atmsg)
+                    pre_push[num] = []
+            num += 1
+
+    #获取出刀记录并推送最新的出刀        
+        if res != 0:
+            history = reversed(res['damage_history'])   #从返回的出刀记录刀的状态
+            clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
+            clan_id = clan_info['clan']['detail']['clan_id']
+            pre_clan_battle_id = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
+            #print(res)
+            if arrow == 0:
+                for line in open(current_folder + "/Output.txt",encoding='utf-8'):
+                    if line != '':
+                        line = line.split(',')
+                        if line[0] != 'SL':
+                            arrow = int(line[4])
+                            print(arrow)
+                #file.close()
+            clan_battle_id = pre_clan_battle_id['clan_battle_id']
+            for hst in history:
+                if ((arrow != 0) and (int(hst['history_id']) > int(arrow))) or (arrow == 0):   #记录刀ID防止重复
+                    name = hst['name']  #名字
+                    vid = hst['viewer_id']  #13位ID
+                    kill = hst['kill']  #是否击杀
+                    damage = hst['damage']  #伤害
+                    lap = hst['lap_num']    #圈数
+                    boss = int(hst['order_num'])    #几号boss
+                    ctime = hst['create_time']  #出刀时间
+                    real_time = time.localtime(ctime)   
+                    day = real_time[2]  #垃圾代码
+                    hour = real_time[3]
+                    minu = real_time[4]
+                    seconds = real_time[5]
+                    arrow = hst['history_id']   #记录指针
+                    enemy_id = hst['enemy_id']  #BOSSID，暂时没找到用处
+                    is_auto = hst['is_auto']
+                    if is_auto == 1:
+                        is_auto_r = '自动刀'
+                    else:
+                        is_auto_r = '手动刀'
+        
+                    ifkill = ''     #击杀变成可读
+                    if kill == 1:
+                        ifkill = '并击破'
+                        #push = True
+                    
+                    for st in phase:
+                        if lap >= st:
+                            phases = st
+                    phases = phase[phases]                
+                    timeline = await client.callapi('/clan_battle/battle_log_list', {'clan_battle_id': clan_battle_id, 'order_num': boss, 'phases': [phases], 'report_types': [1], 'hide_same_units': 0, 'favorite_ids': [], 'sort_type': 3, 'page': 1})
+                    timeline_list = timeline['battle_list']
+                    #print(timeline_list)
+                    start_time = 0
+                    used_time = 0
+                    for tl in timeline_list:
+                        if tl['battle_end_time'] == ctime:
+                            blid1 = tl['battle_log_id']
+                            tvid = tl['target_viewer_id']
+                            print(blid1)
+                            blid = await client.callapi('/clan_battle/timeline_report', {'target_viewer_id': tvid, 'clan_battle_id': clan_battle_id, 'battle_log_id': int(blid1)})
+                            start_time = blid['start_remain_time']
+                            used_time = blid['battle_time']
+                    if start_time == 90:
+                        battle_type = f'初始刀{used_time}s'
+                    else:
+                        battle_type = f'补偿刀{used_time}s'
+                    for st in side:
+                        if lap >= st:
+                            cur_side = st
+                    cur_side = side[cur_side]
+                    msg += f'[{cur_side}-{battle_type}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}({is_auto_r})\n'
+                    output = f'{day},{hour},{minu},{seconds},{arrow},{name},{vid},{lap},{boss},{damage},{kill},{enemy_id},{clan_battle_id},{is_auto},{start_time},{used_time},'  #记录出刀，后面要用
+                    with open(current_folder+"/Output.txt","a",encoding='utf-8') as file:   
+                        file.write(str(output)+'\n')
+                        file.close()
+
+    #记录实战人数变动并推送
+            change = False
+            for num in range(0,5):  
+                boss_info2 = await client.callapi('/clan_battle/boss_info', {'clan_id': clan_id, 'clan_battle_id': clan_battle_id, 'lap_num': boss_status[num], 'order_num': num+1}) 
+                fnum = boss_info2['fighter_num']
+                if in_game[num] != fnum:
+                    in_game[num] = fnum
+                    change = True
+            if change == True:
+                msg += f'当前实战人数发生变化:\n[{in_game[0]}][{in_game[1]}][{in_game[2]}][{in_game[3]}][{in_game[4]}]'
+
+            if msg != '':
+                if len(msg)>200:
+                    msg = '...\n' + msg[-200:] 
+                for forward_group in forward_group_list:
+                    await bot.send_group_msg(group_id = forward_group,message = msg)
+        else:
+            print('error')
+    except Exception as e:
+        if ('连接中断' or '发生了错误(E)') in str(e):
+            for forward_group in forward_group_list:
+                await bot.send_group_msg(group_id = forward_group,message = '连接中断，可能顶号，已自动关闭推送，请重新开启会战推送')
             sw = 0
-            for forward_group in forward_group_list:
-                await bot.send_group_msg(group_id = forward_group,message = msg)
-            return
-
-
-#判定各BOSS圈数并获取预约表推送    
-    num = 0
-    for boss_info in res['boss_info']:
-        lap_num = boss_info['lap_num']
-        if lap_num != boss_status[num]:
-            boss_status[num] = lap_num
-            #msg += f'全新的{lap_num}周目{num+1}王来了！'
-            push_list = pre_push[num]
-            if push_list != []:     #预约后群内和行会内提醒
-                chat_content = f'{lap_num}周目{num+1}王已被预约，请耐心等候！'
-                try:
-                    await verify()
-                    await client.callapi('/clan/chat', {'clan_id': clan_id, 'type': 0, 'message': chat_content})
-                except:
-                    pass
-                warn = ''
-                for pu in push_list:
-                    pu = pu.split('|')
-                    uid = int(pu[0])
-                    gid = int(pu[1])
-                    atmsg = f'提醒：已到{lap_num}周目 {num+1} 王！请注意沟通上一尾刀~\n[CQ:at,qq={uid}]'
-                    await bot.send_group_msg(group_id = gid,message = atmsg)
-                pre_push[num] = []
-        num += 1
-
-#获取出刀记录并推送最新的出刀        
-    if res != 0:
-        history = reversed(res['damage_history'])   #从返回的出刀记录刀的状态
-        clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
-        clan_id = clan_info['clan']['detail']['clan_id']
-        pre_clan_battle_id = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
-        #print(res)
-        if arrow == 0:
-            for line in open(current_folder + "/Output.txt",encoding='utf-8'):
-                if line != '':
-                    line = line.split(',')
-                    if line[0] != 'SL':
-                        arrow = int(line[4])
-                        print(arrow)
-            #file.close()
-        clan_battle_id = pre_clan_battle_id['clan_battle_id']
-        for hst in history:
-            if ((arrow != 0) and (int(hst['history_id']) > int(arrow))) or (arrow == 0):   #记录刀ID防止重复
-                name = hst['name']  #名字
-                vid = hst['viewer_id']  #13位ID
-                kill = hst['kill']  #是否击杀
-                damage = hst['damage']  #伤害
-                lap = hst['lap_num']    #圈数
-                boss = int(hst['order_num'])    #几号boss
-                ctime = hst['create_time']  #出刀时间
-                real_time = time.localtime(ctime)   
-                day = real_time[2]  #垃圾代码
-                hour = real_time[3]
-                minu = real_time[4]
-                seconds = real_time[5]
-                arrow = hst['history_id']   #记录指针
-                enemy_id = hst['enemy_id']  #BOSSID，暂时没找到用处
-                is_auto = hst['is_auto']
-                if is_auto == 1:
-                    is_auto_r = '自动刀'
-                else:
-                    is_auto_r = '手动刀'
-    
-                ifkill = ''     #击杀变成可读
-                if kill == 1:
-                    ifkill = '并击破'
-                    #push = True
-                
-                for st in phase:
-                    if lap >= st:
-                        phases = st
-                phases = phase[phases]                
-                timeline = await client.callapi('/clan_battle/battle_log_list', {'clan_battle_id': clan_battle_id, 'order_num': boss, 'phases': [phases], 'report_types': [1], 'hide_same_units': 0, 'favorite_ids': [], 'sort_type': 3, 'page': 1})
-                timeline_list = timeline['battle_list']
-                #print(timeline_list)
-                start_time = 0
-                used_time = 0
-                for tl in timeline_list:
-                    if tl['battle_end_time'] == ctime:
-                        blid1 = tl['battle_log_id']
-                        tvid = tl['target_viewer_id']
-                        print(blid1)
-                        blid = await client.callapi('/clan_battle/timeline_report', {'target_viewer_id': tvid, 'clan_battle_id': clan_battle_id, 'battle_log_id': int(blid1)})
-                        start_time = blid['start_remain_time']
-                        used_time = blid['battle_time']
-                if start_time == 90:
-                    battle_type = f'初始刀{used_time}s'
-                else:
-                    battle_type = f'补偿刀{used_time}s'
-                for st in side:
-                    if lap >= st:
-                        cur_side = st
-                cur_side = side[cur_side]
-                msg += f'[{cur_side}-{battle_type}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}({is_auto_r})\n'
-                output = f'{day},{hour},{minu},{seconds},{arrow},{name},{vid},{lap},{boss},{damage},{kill},{enemy_id},{clan_battle_id},{is_auto},{start_time},{used_time},'  #记录出刀，后面要用
-                with open(current_folder+"/Output.txt","a",encoding='utf-8') as file:   
-                    file.write(str(output)+'\n')
-                    file.close()
-
-#记录实战人数变动并推送
-        change = False
-        for num in range(0,5):  
-            boss_info2 = await client.callapi('/clan_battle/boss_info', {'clan_id': clan_id, 'clan_battle_id': clan_battle_id, 'lap_num': boss_status[num], 'order_num': num+1}) 
-            fnum = boss_info2['fighter_num']
-            if in_game[num] != fnum:
-                in_game[num] = fnum
-                change = True
-        if change == True:
-            msg += f'当前实战人数发生变化:\n[{in_game[0]}][{in_game[1]}][{in_game[2]}][{in_game[3]}][{in_game[4]}]'
-
-        if msg != '':
-            if len(msg)>200:
-                msg = '...\n' + msg[-200:] 
-            for forward_group in forward_group_list:
-                await bot.send_group_msg(group_id = forward_group,message = msg)
-    else:
-        print('error')
+        elif '发生了错误' in str(e):
+            print('发生错误，下次重试')
+        return  
             
 
 @sv.on_fullmatch('切换会战推送')    #这个给要出刀的号准备的
@@ -330,7 +344,10 @@ async def sw_pus(bot , ev):
     
 @sv.on_prefix('会战预约')   #会战预约5
 async def preload(bot , ev):
-    global pre_push
+    global pre_push,sw
+    if sw == 0:
+        await bot.send(ev,'未开启会战推送')
+        return
     num = ev.message.extract_plain_text().strip()
     try:
         if int(num) not in [1,2,3,4,5]:
@@ -436,8 +453,13 @@ async def cout(bot , ev):
     await bot.send(ev, '上传完成')
 
 
-@sv.on_fullmatch('会战状态')    #这个更是重量级
+@sv.on_prefix('会战状态')    #这个更是重量级
 async def status(bot,ev):
+    global sw
+    status = ev.message.extract_plain_text().strip()
+    if sw == 0 and status != '1':
+        await bot.send(ev,'现在会战推送状态为关闭，请确认是否有人上号，如果仍然需要查看状态，请输入 会战状态1 来确认')
+        return
     #try:
     await bot.send(ev,'生成中...')
     ##第一部分
