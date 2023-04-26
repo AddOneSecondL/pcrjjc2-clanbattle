@@ -894,6 +894,7 @@ async def get_battle_status(bot,ev):
             lap_num = tl['lap_num']
             battle_end_time = tl['battle_end_time']
             damage = tl['total_damage']
+            #目前暂时无法计算跨日残血boss合刀，对该部分玩家的计算会有偏差，应该可以从这里入手
             usrname = tl['user_name']
             hr = time.localtime(battle_end_time)
             day = hr[2]
@@ -985,7 +986,7 @@ async def get_battle_status(bot,ev):
                     kill_acc += 0.5
                     half_sign -= 0.5
         if kill_acc < 3:
-            msg += f'{name}缺少{3-kill_acc+half_sign}刀\n'
+            msg += f'{name}缺少{3-kill_acc}刀\n目前暂时无法计算跨日残血boss合刀，对该部分玩家的计算会有偏差'
     if msg != '':
         await bot.send(ev,msg)
     
