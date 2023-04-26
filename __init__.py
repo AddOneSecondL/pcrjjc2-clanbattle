@@ -890,13 +890,14 @@ async def get_battle_status(bot,ev):
         for tl in blid['timeline']:
             if tl['is_battle_finish'] == 1:
                 remain_time = tl['remain_time']
-                if remain_time != 0 or extra_back == 1:
+                if remain_time != 0:
                     kill = 1
                 else:
                     kill = 0
         log.append(start_time)
         log.append(used_time)
         log.append(kill)
+        log.append(extra_back)
     res2 = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 1})
     #lack_list = []
     msg = ''
@@ -911,6 +912,11 @@ async def get_battle_status(bot,ev):
                 start_time = log[6]
                 used_time = log[7]
                 kill = log[8]
+                extra_back = log[9]
+                if extra_back == 1:
+                    kill_acc += 0.5
+                    half_sign += 0.5
+                    continue
                 if start_time == 90 and kill == 1:
                     if time_sign >= 1:
                         time_sign -= 1
@@ -932,7 +938,7 @@ async def get_battle_status(bot,ev):
                     kill_acc += 0.5
                     half_sign -= 0.5
         if kill_acc < 3:
-            msg += f'{name}缺少{3-kill_acc}刀\n'
+            msg += f'{name}缺少{3-kill_acc+half_sign}刀\n'
     if msg != '':
         await bot.send(ev,msg)
     
