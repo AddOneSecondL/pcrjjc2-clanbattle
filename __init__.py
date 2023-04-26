@@ -23,16 +23,14 @@ from hoshino.modules.priconne import chara
 from hoshino.modules.priconne._pcr_data import CHARA_NAME
 from PIL import Image, ImageDraw, ImageFont, ImageChops, ImageFilter, ImageOps
 from hoshino import util
-
-
 sv_help = '''
 [游戏内会战推送] 无描述
 '''.strip()
 sv = SafeService('会战推送',help_=sv_help, bundle='pcr查询')
 curpath = dirname(__file__)
-
 ##############################下面这个框填要推送的群
 forward_group_list = []
+##############################
 
 
 current_folder = os.path.dirname(__file__)
@@ -46,7 +44,9 @@ captcha_lck = Lock()
 
 with open(join(curpath, 'account.json')) as fp:
     acinfo = load(fp)
-
+experimental = acinfo["experimental_options"]
+if acinfo["push_group"] != []:
+    forward_group_list = acinfo["push_group"]
 bot = get_bot()
 validate = None
 validating = False
@@ -102,6 +102,7 @@ async def validate(session):
 swa = 0
 boss_status = [0,0,0,0,0]
 in_game = [0,0,0,0,0]
+in_game_old = [0,0,0,0,0]
 pre_push = [[],[],[],[],[]]
 coin = 0
 arrow = 0
@@ -143,7 +144,7 @@ curr_side = '_'
 
 @sv.scheduled_job('interval', seconds=20)
 async def teafak():
-    global coin,arrow_rec,side,curr_side,arrow,sw,pre_push,fnum,forward_group_list,boss_status,in_game,tvid
+    global coin,arrow_rec,side,curr_side,arrow,sw,pre_push,fnum,forward_group_list,boss_status,in_game,tvid,experimental
     try:
         load_index = 0
         if sw == 0:     #会战推送开关
@@ -239,8 +240,10 @@ async def teafak():
                             print(arrow)
                 #file.close()
             clan_battle_id = pre_clan_battle_id['clan_battle_id']
+            in_battle = []
             for hst in history:
                 if ((arrow != 0) and (int(hst['history_id']) > int(arrow))) or (arrow == 0):   #记录刀ID防止重复
+                    
                     name = hst['name']  #名字
                     vid = hst['viewer_id']  #13位ID
                     kill = hst['kill']  #是否击杀
@@ -292,6 +295,7 @@ async def teafak():
                             cur_side = st
                     cur_side = side[cur_side]
                     msg += f'[{cur_side}-{battle_type}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}({is_auto_r})\n'
+                    in_battle.append([boss,kill])
                     output = f'{day},{hour},{minu},{seconds},{arrow},{name},{vid},{lap},{boss},{damage},{kill},{enemy_id},{clan_battle_id},{is_auto},{start_time},{used_time},'  #记录出刀，后面要用
                     with open(current_folder+"/Output.txt","a",encoding='utf-8') as file:   
                         file.write(str(output)+'\n')
@@ -303,10 +307,26 @@ async def teafak():
                 boss_info2 = await client.callapi('/clan_battle/boss_info', {'clan_id': clan_id, 'clan_battle_id': clan_battle_id, 'lap_num': boss_status[num], 'order_num': num+1}) 
                 fnum = boss_info2['fighter_num']
                 if in_game[num] != fnum:
+                    if fnum > in_game[num]:
+                        diff = fnum - in_game[num]
+                        in_game_old[num] += diff
+                        
                     in_game[num] = fnum
                     change = True
+                if in_battle != []:
+                    change = True
+                    for ib in in_battle:
+                        if in_game_old[ib[0]-1] > 0:
+                            in_game_old[ib[0]-1] -= 1
+                        if ib[1] == 1:
+                            in_game_old[ib[0]-1] = 0
+                    
+                    
             if change == True:
-                msg += f'当前实战人数发生变化:\n[{in_game[0]}][{in_game[1]}][{in_game[2]}][{in_game[3]}][{in_game[4]}]'
+                if acinfo['ingame_calc_mode'] == 1:
+                    msg += f'当前实战人数发生变化:\n[{in_game_old[0]}][{in_game_old[1]}][{in_game_old[2]}][{in_game_old[3]}][{in_game_old[4]}]'
+                else:
+                    msg += f'当前90s内实战人数发生变化:\n[{in_game[0]}][{in_game[1]}][{in_game[2]}][{in_game[3]}][{in_game[4]}]'
 
             if msg != '':
                 if len(msg)>200:
@@ -461,348 +481,375 @@ async def status(bot,ev):
         await bot.send(ev,'现在会战推送状态为关闭，请确认是否有人上号，如果仍然需要查看状态，请输入 会战状态1 来确认')
         return
     #try:
-    await bot.send(ev,'生成中...')
-    ##第一部分
-    
-    for root_, dirs_, files_ in os.walk(img_file+'/bg'):
-        bg = files_
-    bgnum = random.randint(0, len(bg)-1)
-    img = Image.open(img_file+'/bg/'+bg[bgnum])
-    img = img.resize((1920,1080),Image.ANTIALIAS)
-        
-    front_img = Image.open(img_file+'/cbt.png')
-    img.paste(front_img, (0,0),front_img) 
-    draw = ImageDraw.Draw(img)
-    setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 40)
-    await verify()
-    
-    load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
-    clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
-    clan_id = clan_info['clan']['detail']['clan_id']
-    item_list = {}
-    for item in load_index["item_list"]:
-        item_list[item["id"]] = item["stock"]
-    coin = item_list[90006]   
-    res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
-    clan_battle_id = res['clan_battle_id']
-    clan_name = res['user_clan']['clan_name']
-    draw.text((1340,50), f'{clan_name}', font=setFont, fill="#A020F0")
-    rank = res['period_rank']
-    setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 25)
-    draw.text((1340,170), f'排名：{rank}', font=setFont, fill="#A020F0")
-    lap = res['lap_num']
-    img_num = 0 
-    for boss in res['boss_info']:
-        boss_num = boss['order_num']
-        boss_id = boss['enemy_id']
-        boss_lap_num = boss['lap_num']
-        mhp = boss['max_hp']
-        hp = boss['current_hp']
-        hp_percentage = hp / mhp  # 计算血量百分比
-    
-        # 根据血量百分比设置血条颜色
-        if hp_percentage > 0.5:
-            hp_color = "lightgreen"
-        elif 0.25 < hp_percentage <= 0.5:
-            hp_color = "orange"
-        else:
-            hp_color = "red"
-        if boss_lap_num - lap == 2:
-            hp_color = "purple"
-        elif boss_lap_num - lap == 1:
-            hp_color = "pink"
-    
-        length = int((hp / mhp) * 1180)
-        hp_bar = rounded_rectangle((length, 95), 10, hp_color)
-        img.paste(hp_bar, (80, 40 + (boss_num - 1) * 142), hp_bar)
-        try:    #晚点改
-            try:
-                img2 = R.img(f'priconne/unit/{boss_ooo[img_num]}.png').open()
-            except:
-                img2 = R.img(f'priconne/unit/icon_unit_100131.png').open()
-            img_num += 1
-            img2 = img2.resize((64,64),Image.ANTIALIAS)
-            img.paste(img2, (93, 50+(boss_num-1)*142))
-            
-        except:
-            pass
-        
-        # 在BOSS血条循环中
-        bg_color = (0, 0, 0, 128)  # 半透明黑色背景
-        bg_width = 300  # 背景宽度
-        bg_height = 35  # 背景高度
-        
-        # 绘制半透明背景
-        bg = Image.new('RGBA', (bg_width, bg_height), bg_color)
-        img.paste(bg, (160, 38+(boss_num-1)*142), bg)
-        bg_width = 200
-        stage_color = {
-            1: 'green',
-            4: 'yellow',
-            11: 'blue',
-            35: 'purple',
-            45: 'red'
-        }
-        for st in side:
-            if boss_lap_num >= st:
-                cur_stage = st
-        cur_stage = side[cur_stage]
-        for st in stage_color:
-            if boss_lap_num >= st:
-                bg_color = st
-        bg_color = stage_color[bg_color]
-        bg = Image.new('RGBA', (bg_width, bg_height), bg_color)
-        img.paste(bg, (500, 38+(boss_num-1)*142), bg)
-        setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 25)
-        draw.text((160, 40+(boss_num-1)*142), f'{format_number_with_commas(hp)}/{format_number_with_commas(mhp)}', font=setFont, fill="#FFFFFF")
-        draw.text((500, 40+(boss_num-1)*142), f'{cur_stage}面 {boss_lap_num}周目', font=setFont, fill="#FFFFFF")
-
-        
-        
-        pre = pre_push[boss_num-1]
-        all_name = ''
-        if pre != []:
-            
-            for pu in pre:
-                pu = pu.split('|')
-                uid = int(pu[0])
-                gid = int(pu[1])
-        
-        
-                pp1 = uid
-                name = ''
-                try:
-                    info = await bot.get_stranger_info(self_id=ev.self_id, user_id=pp1)
-                    name = info['nickname'] or pp1
-                    name = util.filt_message(name)
-                    all_name += f'{name} '
-                except CQHttpError as e:
-                    print('error name')
-                    pass
-        if all_name != '':
-            all_name+='已预约'
-            draw.text((160, 80+(boss_num-1)*142), f'{all_name}', font=setFont, fill="#A020F0")
-        else:
-            draw.text((160, 80+(boss_num-1)*142), f'无人预约', font=setFont, fill="#A020F0")
-        
-    #第二部分    
-    res2 = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 1})
-    #print(res2)
-    row = 0
-    width = 0
-    setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 20)
-    last_rank = res2['last_total_ranking']
-    draw.text((1320, 320), f'上期排名:{last_rank}', font=setFont, fill="#A020F0")
-    all_battle_count = 0
-    for members in res2['clan']['members']:
-        vid = members['viewer_id']
-        name = members['name']
-        favor = members['favorite_unit']
-        favorid = str(favor['id'])[:-2]
-        stars = 3 if members['favorite_unit']['unit_rarity'] != 6 else 6
-        try:
-            img2 = R.img(f'priconne/unit/icon_unit_{favorid}{stars}1.png').open()
-            img2 = img2.resize((48,48),Image.ANTIALIAS)
-    
-            img.paste(img2, (82+int(149.5*width), 761+int(59.8*row)), img2)
-        except:
-            pass
-
-        
-
-        kill_sign = 0
-        kill_acc = 0
-        todayt = time.localtime()
-        hourh = todayt[3]
-        today = 0
-        if hourh < 5:
-            today = todayt[2]-1
-        else:
-            today = todayt[2]
-        
-        #today = 26
-        setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 15)
-        draw.text((1000,760), f'{today}日', font=setFont, fill="#A020F0")
-        img3 = Image.new('RGB', (25, 17), "white")
-        img4 = Image.new('RGB', (12, 17), "red")
-        #img5 = Image.new('RGB', (25, 17), "green")
-        time_sign = 0
-        half_sign = 0
-        sl_sign = 0
-        for line in open(current_folder + "/Output.txt",encoding='utf-8'):
-            if line != '':
-                line = line.split(',')
-                print(line[0])
-                if line[0] == 'SL':
-                    mode = 1
-                    re_vid = int(line[2])
-                    day = int(line[3])
-                    hour = int(line[4])
-                else:
-                    mode = 2
-                    day = int(line[0])
-                    hour = int(line[1])
-                    re_battle_id = int(line[4])
-                    re_name = line[5]
-                    re_vid = line[6]
-                    re_lap = int(line[7])
-                    re_boss = int(line[8])
-                    re_dmg = int(line[9])
-                    re_kill = int(line[10])
-                    re_boss_id = int(line[11])
-                    re_clan_battle_id = int(line[12])
-                    re_is_auto = int(line[13])
-                    re_start_time = int(line[14])
-                    re_battle_time = int(line[15])
-                if_today = False
-                if ((day == today and hour >= 5) or (day == today + 1 and hour < 5)) and (re_clan_battle_id == clan_battle_id) and mode == 2:
-                    if_today = True
-                if ((day == today and hour >= 5) or (day == today + 1 and hour < 5)) and mode == 1:
-                    if_today = True
-                
-                
-                if if_today == True and mode == 1 and int(vid) == int(re_vid):
-                    sl_sign = 1
-                
-                if int(vid) == int(re_vid) and if_today == True and mode == 2:
-                    if re_start_time == 90 and re_kill == 1:
-                        if time_sign >= 1:
-                            time_sign -= 1
-                            half_sign -= 0.5
-                            kill_acc += 0.5
-                            continue
-                        if re_battle_time <= 20 and re_battle_time != 0:
-                            time_sign += 1
-                        kill_acc += 0.5
-                        half_sign += 0.5
-                    elif re_start_time == 90 and re_kill == 0:
-                        if time_sign >= 1:
-                            kill_acc += 0.5
-                            time_sign -= 1
-                            half_sign -= 0.5
-                            continue
-                        kill_acc += 1
-                    else:
-                        kill_acc += 0.5
-                        half_sign -= 0.5
-                
-        all_battle_count += kill_acc
-        
-        if kill_acc == 0:
-            draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#FF0000")
-        elif 0< kill_acc < 3:
-            draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#FF00FF")
-        elif kill_acc == 3:
-            draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#00FF00")
-        #print(half_sign)
-        width2 = 0
-        kill_acc = kill_acc - half_sign
-        
-        while kill_acc-1 >=0:
-            img.paste(img3, (130+int(149.5*width)+30*width2, 785+60*row))
-            kill_acc -= 1
-            width2 += 1
-        while half_sign-0.5 >=0:
-            img.paste(img4, (130+int(149.5*width)+30*width2, 785+60*row))
-            half_sign -= 0.5
-            width2 += 1
-        #draw.text((132+149*width, 781+60*row), f'{kill_acc}', font=setFont, fill="#A020F0")
-        if sl_sign == 1:
-            draw.text((130+int(149.5*width), 785+60*row), f'SL', font=setFont, fill="black")
-        width += 1
-        if width == 6:
-            width = 0
-            row += 1    
-    #file.close()
-    count_m = len(res2['clan']['members'])*3        
-    draw.text((1000,780), f'今日已出{all_battle_count}刀/{count_m}刀', font=setFont, fill="#A020F0")
-    #第三部分
-    if res != 0:
-        
-        info = res['boss_info'] #BOSS
-        next_lap_1 = res['lap_num']    #周目
-        next_boss = 1
+    if acinfo["statu_text_mode"] == 1:
         msg = ''
-        history = res['damage_history']
-        order = 0
-        for hst in history:
-            order += 1
-            if order < 21:
-                name = hst['name']
-                vid = hst['viewer_id']
-                kill = hst['kill']
-                damage = hst['damage']
-                lap = hst['lap_num']
-                boss = int(hst['order_num'])
-                ctime = hst['create_time']
-                real_time = time.localtime(ctime)
-                day = real_time[2]
-                hour = real_time[3]
-                minu = real_time[4]
-                seconds = real_time[5]
-                arrow = hst['history_id']
-                #real_time = time.strftime('%d - %H:%M:%S', time.localtime(ctime))
-                enemy_id = hst['enemy_id']
-                if boss == 5:
-                    next_boss = 1
-                    next_lap = lap + 1
-                else:
-                    next_boss = boss + 1
-                    next_lap = lap
-                ifkill = ''
-                if kill == 1:
-                    ifkill = '并击破'
-                    #push = True
-                msg = f'[{day}日{hour:02}:{minu:02}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}'
-                if kill == 1:
-                    draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="black")
-                else:
-                    draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="purple")
-                if order == 1:
-                    res3 = await client.callapi('/clan_battle/history_report', {'clan_id': clan_id, 'history_id': int(arrow)})
-                    print(res3)
-                    row = 0
-                    for hi in res3['history_report']:
-                        hvid = hi['viewer_id']
-                        #hunit_id = hi['unit_id'] 
-                        if hvid != 0:
-                            hstars = hi['unit_rarity']
-                            hdmg = hi['damage']
-                            favorid = str(hi['unit_id'])[:-2]
-                            stars = 3 if hstars != 6 else 6
-                            try:
-                                img2 = R.img(f'priconne/unit/icon_unit_{favorid}{stars}1.png').open()
-                                img2 = img2.resize((48,48),Image.ANTIALIAS)
-                                img.paste(img2, (1320,761+int(59.8*row)))
-                            except:
-                                pass
-                            draw.text((1380,761+int(59.8*row)), f'伤害{hdmg}', font=setFont, fill="#A020F0")
-                            row += 1
-        draw.text((1320, 230), f'当前{next_lap_1}周目', font=setFont, fill="#A020F0")            
+        load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
+        clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
+        clan_id = clan_info['clan']['detail']['clan_id']
+        item_list = {}
+        for item in load_index["item_list"]:
+            item_list[item["id"]] = item["stock"]
+        coin = item_list[90006]   
+        res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
+        clan_battle_id = res['clan_battle_id']
+        clan_name = res['user_clan']['clan_name']
+        rank = res['period_rank']
+        lap = res['lap_num']
+        msg += f'{clan_name}[{rank}名]--{lap}周目\n※实战人数指90秒内人数\n'
+        for boss in res['boss_info']:
+            boss_num = boss['order_num']
+            boss_id = boss['enemy_id']
+            boss_lap_num = boss['lap_num']
+            mhp = boss['max_hp']
+            hp = boss['current_hp']
+            hp_percentage = int((hp / mhp)*100)  # 计算血量百分比
+            boss_info2 = await client.callapi('/clan_battle/boss_info', {'clan_id': clan_id, 'clan_battle_id': clan_battle_id, 'lap_num': boss_lap_num, 'order_num': boss_num}) 
+            fnum = boss_info2['fighter_num']
+            msg += f'{boss_lap_num}周目{boss_num}王 剩余{hp}血({hp_percentage}%)|{fnum}人实战\n'
+        await bot.send(ev,msg)
+    else:    
+        await bot.send(ev,'生成中...')
+        ##第一部分
         
-        fnum1 = -1
-        try:
-            boss_info2 = await client.callapi('/clan_battle/boss_info', {'clan_id': clan_id, 'clan_battle_id': clan_battle_id, 'lap_num': next_lap, 'order_num': next_boss})
-            fnum1 = boss_info2['fighter_num']
-        except:
-            pass
-        #print(boss_info2)
+        for root_, dirs_, files_ in os.walk(img_file+'/bg'):
+            bg = files_
+        bgnum = random.randint(0, len(bg)-1)
+        img = Image.open(img_file+'/bg/'+bg[bgnum])
+        img = img.resize((1920,1080),Image.ANTIALIAS)
+            
+        front_img = Image.open(img_file+'/cbt.png')
+        img.paste(front_img, (0,0),front_img) 
+        draw = ImageDraw.Draw(img)
+        setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 40)
+        await verify()
         
-        draw.text((1020,860), f'当前有{fnum1}名玩家正在实战', font=setFont, fill="#A020F0")
-    else:
-        print('error')
+        load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
+        clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
+        clan_id = clan_info['clan']['detail']['clan_id']
+        item_list = {}
+        for item in load_index["item_list"]:
+            item_list[item["id"]] = item["stock"]
+        coin = item_list[90006]   
+        res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
+        clan_battle_id = res['clan_battle_id']
+        clan_name = res['user_clan']['clan_name']
+        draw.text((1340,50), f'{clan_name}', font=setFont, fill="#A020F0")
+        rank = res['period_rank']
+        setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 25)
+        draw.text((1340,170), f'排名：{rank}', font=setFont, fill="#A020F0")
+        lap = res['lap_num']
+        img_num = 0 
+        for boss in res['boss_info']:
+            boss_num = boss['order_num']
+            boss_id = boss['enemy_id']
+            boss_lap_num = boss['lap_num']
+            mhp = boss['max_hp']
+            hp = boss['current_hp']
+            hp_percentage = hp / mhp  # 计算血量百分比
+        
+            # 根据血量百分比设置血条颜色
+            if hp_percentage > 0.5:
+                hp_color = "lightgreen"
+            elif 0.25 < hp_percentage <= 0.5:
+                hp_color = "orange"
+            else:
+                hp_color = "red"
+            if boss_lap_num - lap == 2:
+                hp_color = "purple"
+            elif boss_lap_num - lap == 1:
+                hp_color = "pink"
+        
+            length = int((hp / mhp) * 1180)
+            hp_bar = rounded_rectangle((length, 95), 10, hp_color)
+            img.paste(hp_bar, (80, 40 + (boss_num - 1) * 142), hp_bar)
+            try:    #晚点改
+                try:
+                    img2 = R.img(f'priconne/unit/{boss_ooo[img_num]}.png').open()
+                except:
+                    img2 = R.img(f'priconne/unit/icon_unit_100131.png').open()
+                img_num += 1
+                img2 = img2.resize((64,64),Image.ANTIALIAS)
+                img.paste(img2, (93, 50+(boss_num-1)*142))
+                
+            except:
+                pass
+            
+            # 在BOSS血条循环中
+            bg_color = (0, 0, 0, 128)  # 半透明黑色背景
+            bg_width = 300  # 背景宽度
+            bg_height = 35  # 背景高度
+            
+            # 绘制半透明背景
+            bg = Image.new('RGBA', (bg_width, bg_height), bg_color)
+            img.paste(bg, (160, 38+(boss_num-1)*142), bg)
+            bg_width = 200
+            stage_color = {
+                1: 'green',
+                4: 'yellow',
+                11: 'blue',
+                35: 'purple',
+                45: 'red'
+            }
+            for st in side:
+                if boss_lap_num >= st:
+                    cur_stage = st
+            cur_stage = side[cur_stage]
+            for st in stage_color:
+                if boss_lap_num >= st:
+                    bg_color = st
+            bg_color = stage_color[bg_color]
+            bg = Image.new('RGBA', (bg_width, bg_height), bg_color)
+            img.paste(bg, (500, 38+(boss_num-1)*142), bg)
+            setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 25)
+            draw.text((160, 40+(boss_num-1)*142), f'{format_number_with_commas(hp)}/{format_number_with_commas(mhp)}', font=setFont, fill="#FFFFFF")
+            draw.text((500, 40+(boss_num-1)*142), f'{cur_stage}面 {boss_lap_num}周目', font=setFont, fill="#FFFFFF")
     
-    width = img.size[0]   # 获取宽度
-    height = img.size[1]   # 获取高度
-    img = img.resize((int(width*1), int(height*1)), Image.ANTIALIAS)    
+            
+            
+            pre = pre_push[boss_num-1]
+            all_name = ''
+            if pre != []:
+                
+                for pu in pre:
+                    pu = pu.split('|')
+                    uid = int(pu[0])
+                    gid = int(pu[1])
+            
+            
+                    pp1 = uid
+                    name = ''
+                    try:
+                        info = await bot.get_stranger_info(self_id=ev.self_id, user_id=pp1)
+                        name = info['nickname'] or pp1
+                        name = util.filt_message(name)
+                        all_name += f'{name} '
+                    except CQHttpError as e:
+                        print('error name')
+                        pass
+            if all_name != '':
+                all_name+='已预约'
+                draw.text((160, 80+(boss_num-1)*142), f'{all_name}', font=setFont, fill="#A020F0")
+            else:
+                draw.text((160, 80+(boss_num-1)*142), f'无人预约', font=setFont, fill="#A020F0")
+            
+        #第二部分    
+        res2 = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 1})
+        #print(res2)
+        row = 0
+        width = 0
+        setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 20)
+        last_rank = res2['last_total_ranking']
+        draw.text((1320, 320), f'上期排名:{last_rank}', font=setFont, fill="#A020F0")
+        all_battle_count = 0
+        for members in res2['clan']['members']:
+            vid = members['viewer_id']
+            name = members['name']
+            favor = members['favorite_unit']
+            favorid = str(favor['id'])[:-2]
+            stars = 3 if members['favorite_unit']['unit_rarity'] != 6 else 6
+            try:
+                img2 = R.img(f'priconne/unit/icon_unit_{favorid}{stars}1.png').open()
+                img2 = img2.resize((48,48),Image.ANTIALIAS)
+        
+                img.paste(img2, (82+int(149.5*width), 761+int(59.8*row)), img2)
+            except:
+                pass
     
+            
     
-    img = p2ic2b64(img)
-    img = MessageSegment.image(img)
-    await bot.send(ev, img)
-    # except:
-    #     await bot.send(ev,'发生不可预料的错误，请重试')
-    #     pass
+            kill_sign = 0
+            kill_acc = 0
+            todayt = time.localtime()
+            hourh = todayt[3]
+            today = 0
+            if hourh < 5:
+                today = todayt[2]-1
+            else:
+                today = todayt[2]
+            
+            #today = 26
+            setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 15)
+            draw.text((1000,760), f'{today}日', font=setFont, fill="#A020F0")
+            img3 = Image.new('RGB', (25, 17), "white")
+            img4 = Image.new('RGB', (12, 17), "red")
+            #img5 = Image.new('RGB', (25, 17), "green")
+            time_sign = 0
+            half_sign = 0
+            sl_sign = 0
+            for line in open(current_folder + "/Output.txt",encoding='utf-8'):
+                if line != '':
+                    line = line.split(',')
+                    print(line[0])
+                    if line[0] == 'SL':
+                        mode = 1
+                        re_vid = int(line[2])
+                        day = int(line[3])
+                        hour = int(line[4])
+                    else:
+                        mode = 2
+                        day = int(line[0])
+                        hour = int(line[1])
+                        re_battle_id = int(line[4])
+                        re_name = line[5]
+                        re_vid = line[6]
+                        re_lap = int(line[7])
+                        re_boss = int(line[8])
+                        re_dmg = int(line[9])
+                        re_kill = int(line[10])
+                        re_boss_id = int(line[11])
+                        re_clan_battle_id = int(line[12])
+                        re_is_auto = int(line[13])
+                        re_start_time = int(line[14])
+                        re_battle_time = int(line[15])
+                    if_today = False
+                    if ((day == today and hour >= 5) or (day == today + 1 and hour < 5)) and (re_clan_battle_id == clan_battle_id) and mode == 2:
+                        if_today = True
+                    if ((day == today and hour >= 5) or (day == today + 1 and hour < 5)) and mode == 1:
+                        if_today = True
+                    
+                    
+                    if if_today == True and mode == 1 and int(vid) == int(re_vid):
+                        sl_sign = 1
+                    
+                    if int(vid) == int(re_vid) and if_today == True and mode == 2:
+                        if re_start_time == 90 and re_kill == 1:
+                            if time_sign >= 1:
+                                time_sign -= 1
+                                half_sign -= 0.5
+                                kill_acc += 0.5
+                                continue
+                            if re_battle_time <= 20 and re_battle_time != 0:
+                                time_sign += 1
+                            kill_acc += 0.5
+                            half_sign += 0.5
+                        elif re_start_time == 90 and re_kill == 0:
+                            if time_sign >= 1:
+                                kill_acc += 0.5
+                                time_sign -= 1
+                                half_sign -= 0.5
+                                continue
+                            kill_acc += 1
+                        else:
+                            kill_acc += 0.5
+                            half_sign -= 0.5
+                    
+            all_battle_count += kill_acc
+            
+            if kill_acc == 0:
+                draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#FF0000")
+            elif 0< kill_acc < 3:
+                draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#FF00FF")
+            elif kill_acc == 3:
+                draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#00FF00")
+            #print(half_sign)
+            width2 = 0
+            kill_acc = kill_acc - half_sign
+            
+            while kill_acc-1 >=0:
+                img.paste(img3, (130+int(149.5*width)+30*width2, 785+60*row))
+                kill_acc -= 1
+                width2 += 1
+            while half_sign-0.5 >=0:
+                img.paste(img4, (130+int(149.5*width)+30*width2, 785+60*row))
+                half_sign -= 0.5
+                width2 += 1
+            #draw.text((132+149*width, 781+60*row), f'{kill_acc}', font=setFont, fill="#A020F0")
+            if sl_sign == 1:
+                draw.text((130+int(149.5*width), 785+60*row), f'SL', font=setFont, fill="black")
+            width += 1
+            if width == 6:
+                width = 0
+                row += 1    
+        #file.close()
+        count_m = len(res2['clan']['members'])*3        
+        draw.text((1000,780), f'今日已出{all_battle_count}刀/{count_m}刀', font=setFont, fill="#A020F0")
+        #第三部分
+        if res != 0:
+            
+            info = res['boss_info'] #BOSS
+            next_lap_1 = res['lap_num']    #周目
+            next_boss = 1
+            msg = ''
+            history = res['damage_history']
+            order = 0
+            for hst in history:
+                order += 1
+                if order < 21:
+                    name = hst['name']
+                    vid = hst['viewer_id']
+                    kill = hst['kill']
+                    damage = hst['damage']
+                    lap = hst['lap_num']
+                    boss = int(hst['order_num'])
+                    ctime = hst['create_time']
+                    real_time = time.localtime(ctime)
+                    day = real_time[2]
+                    hour = real_time[3]
+                    minu = real_time[4]
+                    seconds = real_time[5]
+                    arrow = hst['history_id']
+                    #real_time = time.strftime('%d - %H:%M:%S', time.localtime(ctime))
+                    enemy_id = hst['enemy_id']
+                    if boss == 5:
+                        next_boss = 1
+                        next_lap = lap + 1
+                    else:
+                        next_boss = boss + 1
+                        next_lap = lap
+                    ifkill = ''
+                    if kill == 1:
+                        ifkill = '并击破'
+                        #push = True
+                    msg = f'[{day}日{hour:02}:{minu:02}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}'
+                    if kill == 1:
+                        draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="black")
+                    else:
+                        draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="purple")
+                    if order == 1:
+                        res3 = await client.callapi('/clan_battle/history_report', {'clan_id': clan_id, 'history_id': int(arrow)})
+                        print(res3)
+                        row = 0
+                        for hi in res3['history_report']:
+                            hvid = hi['viewer_id']
+                            #hunit_id = hi['unit_id'] 
+                            if hvid != 0:
+                                hstars = hi['unit_rarity']
+                                hdmg = hi['damage']
+                                favorid = str(hi['unit_id'])[:-2]
+                                stars = 3 if hstars != 6 else 6
+                                try:
+                                    img2 = R.img(f'priconne/unit/icon_unit_{favorid}{stars}1.png').open()
+                                    img2 = img2.resize((48,48),Image.ANTIALIAS)
+                                    img.paste(img2, (1320,761+int(59.8*row)))
+                                except:
+                                    pass
+                                draw.text((1380,761+int(59.8*row)), f'伤害{hdmg}', font=setFont, fill="#A020F0")
+                                row += 1
+            draw.text((1320, 230), f'当前{next_lap_1}周目', font=setFont, fill="#A020F0")            
+            
+            fnum1 = -1
+            try:
+                boss_info2 = await client.callapi('/clan_battle/boss_info', {'clan_id': clan_id, 'clan_battle_id': clan_battle_id, 'lap_num': next_lap, 'order_num': next_boss})
+                fnum1 = boss_info2['fighter_num']
+            except:
+                pass
+            #print(boss_info2)
+            
+            draw.text((1020,860), f'当前有{fnum1}名玩家正在实战', font=setFont, fill="#A020F0")
+        else:
+            print('error')
+        
+        width = img.size[0]   # 获取宽度
+        height = img.size[1]   # 获取高度
+        img = img.resize((int(width*1), int(height*1)), Image.ANTIALIAS)    
+        
+        
+        img = p2ic2b64(img)
+        img = MessageSegment.image(img)
+        await bot.send(ev, img)
+        # except:
+        #     await bot.send(ev,'发生不可预料的错误，请重试')
+        #     pass
 
 @sv.on_prefix('抓人')
 async def get_battle_status(bot,ev):

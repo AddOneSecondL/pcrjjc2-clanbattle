@@ -3,5 +3,10 @@
     "password": "",
     "platform": 2,
     "channel": 1,
-    "admin": 0
+    "admin": 0,
+    "experimental_options": 0,
+    "next_clanbattle_time": 0,
+    "push_group": [],
+    "ingame_calc_mode": 1,
+    "statu_text_mode" : 0
 }
