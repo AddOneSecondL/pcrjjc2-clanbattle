@@ -348,6 +348,10 @@ async def teafak():
 @sv.on_fullmatch('切换会战推送')    #这个给要出刀的号准备的
 async def sw_pus(bot , ev):
     global sw
+    u_priv = priv.get_user_priv(ev)
+    if u_priv < sv.manage_priv and acinfo["only_admin"] == 1:
+        await bot.send(ev,'权限不足，当前指令仅管理员可用!')
+        return
     if sw == 0:
         sw = 1
         await bot.send(ev,'已开启会战推送')
@@ -433,6 +437,10 @@ async def sw_plist(bot , ev):
 @sv.on_fullmatch('清空预约表')
 async def cle(bot , ev): 
     global pre_push
+    u_priv = priv.get_user_priv(ev)
+    if u_priv < sv.manage_priv and acinfo["only_admin"] == 1:
+        await bot.send(ev,'权限不足，当前指令仅管理员可用!')
+        return
     pre_push = pre_push = [[],[],[],[],[]]
     await bot.send(ev,'已全部清空')
     
@@ -476,6 +484,10 @@ async def cout(bot , ev):
 @sv.on_prefix('会战状态')    #这个更是重量级
 async def status(bot,ev):
     global sw
+    u_priv = priv.get_user_priv(ev)
+    if u_priv < sv.manage_priv and acinfo["only_admin"] == 1:
+        await bot.send(ev,'权限不足，当前指令仅管理员可用!')
+        return
     status = ev.message.extract_plain_text().strip()
     if sw == 0 and status != '1':
         await bot.send(ev,'现在会战推送状态为关闭，请确认是否有人上号，如果仍然需要查看状态，请输入 会战状态1 来确认')
@@ -853,6 +865,10 @@ async def status(bot,ev):
 
 @sv.on_prefix('抓人')
 async def get_battle_status(bot,ev):
+    u_priv = priv.get_user_priv(ev)
+    if u_priv < sv.manage_priv and acinfo["only_admin"] == 1:
+        await bot.send(ev,'权限不足，当前指令仅管理员可用!')
+        return
     msg = ev.message.extract_plain_text().strip()
     if msg != '':
         today = int(msg)
@@ -1112,6 +1128,10 @@ RANK_LST = [1,4,11,21,51,201,601,1201,2801,5001,10001,15001,25001,40001,60001]
 
 @sv.on_prefix('查档线')     #从游戏内获取数据，无数据时返回空
 async def query_line(bot,ev):
+    u_priv = priv.get_user_priv(ev)
+    if u_priv < sv.manage_priv and acinfo["only_admin"] == 1:
+        await bot.send(ev,'权限不足，当前指令仅管理员可用!')
+        return
     goal = ev.message.extract_plain_text().strip()
     await verify()
     try:
