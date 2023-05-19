@@ -114,32 +114,17 @@ side = {
     1: 'A',
     4: 'B',
     11: 'C',
-    35: 'D',
-    45: 'E'
-    
+    31: 'D',
+    41: 'E'    
 }
 phase = {
     1: 1,
     4: 2,
     11: 3,
-    35: 4,
-    45: 5
-    
+    31: 4,
+    41: 5   
 }
 curr_side = '_'
-
-# @sv.on_fullmatch('fffff')
-# async def test2(bot,ev):
-#     item_list = {}
-#     await verify()
-#     load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})   #获取会战币api
-#     for item in load_index["item_list"]:
-#         item_list[item["id"]] = item["stock"]
-#     coin = item_list[90006]
-#     clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
-#     clan_id = clan_info['clan']['detail']['clan_id']
-#     res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
-#     print(res)
 
 
 @sv.scheduled_job('interval', seconds=20)
@@ -599,8 +584,8 @@ async def status(bot,ev):
                 1: 'green',
                 4: 'yellow',
                 11: 'blue',
-                35: 'purple',
-                45: 'red'
+                31: 'purple',
+                41: 'red'
             }
             for st in side:
                 if boss_lap_num >= st:
@@ -894,7 +879,7 @@ async def get_battle_status(bot,ev):
     num = 0
     max_page = 0
     battle_history_list = []
-    l1h = [[6000000,8000000,10000000,12000000,15000000],[6000000,8000000,10000000,12000000,15000000],[7000000,9000000,13000000,15000000,20000000],[17000000,18000000,20000000,21000000,23000000],[85000000,90000000,95000000,100000000,110000000]]
+    l1h = [[6000000,8000000,10000000,12000000,15000000],[6000000,8000000,10000000,12000000,15000000],[10000000,11000000,16000000,18000000,22000000],[18000000,19000000,22000000,23000000,26000000],[85000000,90000000,95000000,100000000,110000000]]
     while(day_sign == 0):
         num += 1
         timeline = await client.callapi('/clan_battle/battle_log_list', {'clan_battle_id': clan_battle_id, 'order_num': 0, 'phases': [1,2,3,4,5], 'report_types': [1], 'hide_same_units': 0, 'favorite_ids': [], 'sort_type': 3, 'page': num})
@@ -1091,7 +1076,7 @@ def p2ic2b64(img, quality=90):
     return 'base64://' + base64_str
     
 @sv.scheduled_job('cron', hour='5') #推送5点时的名次
-async def roo():
+async def rank_and_status():
     global sw,swa,forward_group_list
     if sw == 1:
         await verify()
@@ -1214,9 +1199,9 @@ async def query_line(bot,ev):
             lap = 0
             boss = 0
             
-            stage = [207300000,859700000,4430900000,8113900000,999999999999]
-            l1 = [[7200000,9600000,13000000,16800000,22500000],[9600000,12800000,18000000,22800000,30000000],[14000000,18000000,28800000,36000000,52000000],[59500000,63000000,74000000,79800000,92000000],[297500000,315000000,351500000,380000000,440000000]]
-            lp = [3,10,34,44,999]
+            stage = [207300000,859700000,5198900000,9221900000,999999999999]
+            l1 = [[7200000,9600000,13000000,16800000,22500000],[9600000,12800000,18000000,22800000,30000000],[20000000,22000000,38400000,43200000,57200000],[63000000,66500000,81400000,87400000,104000000],[297500000,315000000,351500000,380000000,440000000]]
+            lp = [3,10,30,40,999]
             
             for rank in page_info['period_ranking']:
                 num += 1
