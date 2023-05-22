@@ -92,7 +92,7 @@ async def verify():     #验证登录状态
             time.sleep(3)
     return
 
-@on_command(f'/pcrval')     #原手动验证
+@on_command(f'/pcrvalclan')     #原手动验证
 async def validate(session):
     global binds, lck, validate
     if session.ctx['user_id'] == acinfo['admin']:
