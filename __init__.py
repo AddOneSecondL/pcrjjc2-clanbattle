@@ -62,13 +62,13 @@ async def captchaVerifier(gt, challenge, userid):
     if acinfo['admin'] == 0:
         bot.logger.error('captcha is required while admin qq is not set, so the login can\'t continue')
     else:
-        url = f"https://cc004.github.io/geetest/geetest.html?captcha_type=1&challenge={challenge}&gt={gt}&userid={userid}&gs=1"
+        url = f"链接头：https://cc004.github.io/geetest/geetest.html\n链接：?captcha_type=1&challenge={challenge}&gt={gt}&userid={userid}&gs=1"
         if int(acinfo["captcha_group"]) != 0:
-            await bot.send_group_msg(group_id = acinfo["captcha_group"],message = f'pcr账号登录需要验证码，请完成以下链接中的验证内容后将第一行validate=后面的内容复制，并用指令/pcrvalclan xxxx将内容发送给机器人完成验证\n验证链接：{url}\n※注意：请私聊BOT发送')
+            await bot.send_group_msg(group_id = acinfo["captcha_group"],message = f'pcr账号登录需要验证码，请完成以下链接中的验证内容后将第一行validate=后面的内容复制，并用指令/pcrvalclan xxxx将内容发送给机器人完成验证\n为避免tx网页安全验证使验证码过期，请手动拼接链接头和链接：{url}\n※注意：请私聊BOT发送')
         else:
             await bot.send_private_msg(
                 user_id = acinfo['admin'],
-                message = f'pcr账号登录需要验证码，请完成以下链接中的验证内容后将第一行validate=后面的内容复制，并用指令/pcrvalclan xxxx将内容发送给机器人完成验证\n验证链接：{url}'
+                message = f'pcr账号登录需要验证码，请完成以下链接中的验证内容后将第一行validate=后面的内容复制，并用指令/pcrvalclan xxxx将内容发送给机器人完成验证\n为避免tx网页安全验证使验证码过期，请手动拼接链接头和链接：{url}'
             )
     validating = True
     await captcha_lck.acquire()
@@ -1359,3 +1359,14 @@ async def query_line(bot,ev):
         print(e)
         await bot.send(ev,'获取数据时发生错误，请重试')
         pass
+
+
+
+chat_list = {}
+#留言功能
+@sv.on_prefix('留言')
+async def chat(bot,ev):
+    global chat_list
+    msg = ev.message.extract_plain_text().strip()
+    uid = ev.user_id
+    qid = ev.group_id
