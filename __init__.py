@@ -63,10 +63,13 @@ async def captchaVerifier(gt, challenge, userid):
         bot.logger.error('captcha is required while admin qq is not set, so the login can\'t continue')
     else:
         url = f"https://cc004.github.io/geetest/geetest.html?captcha_type=1&challenge={challenge}&gt={gt}&userid={userid}&gs=1"
-        await bot.send_private_msg(
-            user_id = acinfo['admin'],
-            message = f'pcr账号登录需要验证码，请完成以下链接中的验证内容后将第一行validate=后面的内容复制，并用指令/pcrvalclan xxxx将内容发送给机器人完成验证\n验证链接：{url}'
-        )
+        if int(acinfo["captcha_group"]) != 0:
+            await bot.send_group_msg(group_id = acinfo["captcha"],message = f'pcr账号登录需要验证码，请完成以下链接中的验证内容后将第一行validate=后面的内容复制，并用指令/pcrvalclan xxxx将内容发送给机器人完成验证\n验证链接：{url}\n※注意：请私聊BOT发送')
+        else:
+            await bot.send_private_msg(
+                user_id = acinfo['admin'],
+                message = f'pcr账号登录需要验证码，请完成以下链接中的验证内容后将第一行validate=后面的内容复制，并用指令/pcrvalclan xxxx将内容发送给机器人完成验证\n验证链接：{url}'
+            )
     validating = True
     await captcha_lck.acquire()
     validating = False

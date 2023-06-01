@@ -9,5 +9,6 @@
     "push_group": [],
     "ingame_calc_mode": 0,
     "statu_text_mode" : 0,
-    "only_admin": 0
+    "only_admin": 0,
+    "captcha_group": 0
 }
