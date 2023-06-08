@@ -128,7 +128,7 @@ phase = {
     41: 5   
 }
 curr_side = '_'
-
+max_chat_list = 20
 
 @sv.scheduled_job('interval', seconds=20)
 async def teafak():
@@ -584,11 +584,11 @@ async def status(bot,ev):
             img.paste(bg, (160, 38+(boss_num-1)*142), bg)
             bg_width = 200
             stage_color = {
-                1: 'green',
-                4: 'yellow',
-                11: 'blue',
-                31: 'purple',
-                41: 'red'
+                1: '#83C266',
+                4: '#67A3E5',
+                11: '#D56CB9',
+                31: '#CF4F45',
+                41: '#A465CC'
             }
             for st in side:
                 if boss_lap_num >= st:
@@ -1364,9 +1364,100 @@ async def query_line(bot,ev):
 
 chat_list = {}
 #留言功能
-@sv.on_prefix('留言')
+@sv.on_prefix('会战留言')
 async def chat(bot,ev):
     global chat_list
     msg = ev.message.extract_plain_text().strip()
     uid = ev.user_id
     qid = ev.group_id
+    if msg == '':
+        await bot.sent(ev,'你想说些什么呢^^')
+    t = int(time.time())
+    if qid not in chat_list:
+        chat_list[qid] = {
+            "uid": [],
+            "text": [],
+            "time": [],
+            "extra": [],
+        }    
+    if len(chat_list[qid]["uid"]) > max_chat_list:   
+        del chat_list[qid]["uid"][0]
+        del chat_list[qid]["text"][0]
+        del chat_list[qid]["time"][0]
+    if len(chat_list[qid]["uid"]) <= max_chat_list:
+        chat_list[qid]["uid"].append(int(uid))
+        chat_list[qid]["text"].append(str(msg))
+        chat_list[qid]["time"].append(int(t))
+
+    await bot.send(ev,'已添加留言！')
+    
+@sv.on_prefix('会战留言板','留言板')
+async def chat_board(bot,ev):
+    qid = ev.group_id
+    if qid not in chat_list:
+        await bot.send(ev,'本群暂时没有留言！')
+        return
+    else:
+        msg = '留言板：\n'
+        for i in (0,len(chat_list[qid]["uid"])):
+            time_now = int(time.time())
+            time_diff = time_now - chat_list[qid]["time"][i]
+            if time_diff <= 60:
+                time_diff = '刚刚'
+            else:
+                time_diff = int(time_diff/60)
+                time_diff = f'{time_diff}分钟前'
+            nickname = chat_list[qid]["uid"][i]
+            nickname = bot.get_group_member_info(group_id = qid,user_id = (chat_list[qid]["uid"][i]))
+            chat = chat_list[qid]["text"][i]
+            msg += f'[{time_diff}]{nickname}:{chat}\n'
+
+@sv.on_fullmatch('出刀时段统计')
+async def stats1(bot,ev):
+    BTime = Image.new("RGBA",(1020,520),'#FFE4C4')
+    draw = ImageDraw.Draw(BTime)
+    setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 20)
+    setFont2 = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 15)    
+
+    time_array = []
+    for i in range(0,24):
+        draw.text((50 + 40*i ,500), f'{i}', font=setFont, fill="#4A515A")
+        time_array.append(0)
+    for i in range(1,6):
+        draw.text((0, 520 - i*100), f'{i}0', font=setFont, fill="#4A515A")
+        draw.line((33, 520 - i*100) + (1000, 520 - i*100), fill='#191970', width=1)
+
+    for line in open(current_folder + "/Output.txt",encoding='utf-8'):
+        values = line.split(",")
+        battle_time = int(values[1])
+        time_array[battle_time] += 1
+
+    maxtime = max(time_array)
+    overline = False
+    linecolor = {
+        0: '#808080',
+        6: '#9CC5B0',
+        12: '#C54730',
+        18: '#384B5A'
+    }
+    for i in range(0,24):
+        if time_array[i] >= 50:
+            overline = True
+        elif time_array[i] == 0:
+            continue
+        for color in linecolor:
+            if i >= color:
+                color2 = linecolor[color]
+        y_axis = 520 - time_array[i]*10 if overline == False else 20
+        y_axis = 500 - time_array[i]*10 if time_array[i] <= 4 else y_axis
+        fontcolor = 'black' if overline == False else 'purple'
+        if time_array[i] == maxtime:
+            draw.line((60 + 40*i, 500) + (60 + 40*i, y_axis-5), fill='#00008B', width=30)
+        draw.line((60 + 40*i, 500) + (60 + 40*i, y_axis), fill=color2, width=20)
+        draw.text((48 + 40*i, y_axis - 20), f'{(time_array[i])}', font=setFont2, fill=fontcolor)
+    draw.line((30, 500) + (1000, 500), fill=128, width=5)
+    draw.line((30, 20) + (30, 500), fill=128, width=5)
+
+    img = pic2b64(BTime)
+    img = MessageSegment.image(img)        
+    await bot.send(ev,img)
