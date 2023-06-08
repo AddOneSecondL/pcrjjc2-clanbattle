@@ -1371,7 +1371,7 @@ async def chat(bot,ev):
     uid = ev.user_id
     qid = ev.group_id
     if msg == '':
-        await bot.sent(ev,'你想说些什么呢^^')
+        await bot.send(ev,'你想说些什么呢^^')
     t = int(time.time())
     if qid not in chat_list:
         chat_list[qid] = {
@@ -1380,6 +1380,7 @@ async def chat(bot,ev):
             "time": [],
             "extra": [],
         }    
+    
     if len(chat_list[qid]["uid"]) > max_chat_list:   
         del chat_list[qid]["uid"][0]
         del chat_list[qid]["text"][0]
@@ -1399,7 +1400,7 @@ async def chat_board(bot,ev):
         return
     else:
         msg = '留言板：\n'
-        for i in (0,len(chat_list[qid]["uid"])):
+        for i in range(0,len(chat_list[qid]["uid"])):
             time_now = int(time.time())
             time_diff = time_now - chat_list[qid]["time"][i]
             if time_diff <= 60:
@@ -1408,9 +1409,15 @@ async def chat_board(bot,ev):
                 time_diff = int(time_diff/60)
                 time_diff = f'{time_diff}分钟前'
             nickname = chat_list[qid]["uid"][i]
-            nickname = bot.get_group_member_info(group_id = qid,user_id = (chat_list[qid]["uid"][i]))
+            try:
+                nickname = await bot.get_group_member_info(group_id = qid,user_id = (chat_list[qid]["uid"][i]))
+                nickname = nickname['nickname']
+            except:
+                pass
             chat = chat_list[qid]["text"][i]
             msg += f'[{time_diff}]{nickname}:{chat}\n'
+            await bot.send(ev,msg)
+            return
 
 @sv.on_fullmatch('出刀时段统计')
 async def stats1(bot,ev):
