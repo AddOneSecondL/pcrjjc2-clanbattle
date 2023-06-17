@@ -130,6 +130,8 @@ phase = {
 }   #阶段周目
 curr_side = '_'
 max_chat_list = 20
+health_list = [[6000000,8000000,10000000,12000000,15000000],[6000000,8000000,10000000,12000000,15000000],[10000000,11000000,16000000,18000000,22000000],[18000000,19000000,22000000,23000000,26000000],[85000000,90000000,95000000,100000000,110000000]]
+
 
 @sv.scheduled_job('interval', seconds=20)
 async def teafak():
@@ -478,7 +480,7 @@ async def cout(bot , ev):
 
 @sv.on_prefix('会战状态')    #这个更是重量级
 async def status(bot,ev):
-    global sw
+    global sw,health_list,phase
     u_priv = priv.get_user_priv(ev)
     if u_priv < sv.manage_priv and acinfo["only_admin"] == 1:
         await bot.send(ev,'权限不足，当前指令仅管理员可用!')
@@ -719,6 +721,7 @@ async def status(bot,ev):
                         sl_sign = 1
                     
                     if int(vid) == int(re_vid) and if_today == True and mode == 2:
+                        full_check = 0
                         if re_start_time == 90 and re_kill == 1:
                             if time_sign >= 1:
                                 time_sign -= 1
@@ -727,6 +730,20 @@ async def status(bot,ev):
                                 continue
                             if re_battle_time <= 20 and re_battle_time != 0:
                                 time_sign += 1
+                            dmgcheck = 0
+                            for check in open(current_folder + "/Output.txt",encoding='utf-8'):
+                                if check != '':
+                                    check = line.split(',')
+                                    if check[0] != 'SL' and (check[7] == re_lap and check[8] == re_boss):
+                                        dmgcheck += check[9]
+                            for st in phase:
+                                if re_lap >= st:
+                                    phases = st
+                            phases = phase[phases] 
+                            if dmgcheck > health_list[phases-1][re_boss-1]:     #总伤害大于BOSS血量，判定为满补
+                                full_check += 1
+
+
                             kill_acc += 0.5
                             half_sign += 0.5
                         elif re_start_time == 90 and re_kill == 0:
@@ -739,7 +756,11 @@ async def status(bot,ev):
                         else:
                             kill_acc += 0.5
                             half_sign -= 0.5
-                    
+            # if full_check != 0:        
+            #     kill_acc -= 0.5*full_check        
+            if kill_acc > 3:    #对满补刀无从下手，先限定三刀补一下
+                kill_acc = 3
+                half_sogn = 0
             all_battle_count += kill_acc
             
             if kill_acc == 0:
@@ -1453,6 +1474,8 @@ async def stats1(bot,ev):
 
     for line in open(current_folder + "/Output.txt",encoding='utf-8'):
         values = line.split(",")
+        if values[0] == 'SL':
+            continue
         battle_time = int(values[1])
         time_array[battle_time] += 1
 
