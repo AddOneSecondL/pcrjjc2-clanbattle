@@ -102,42 +102,43 @@ async def validate(session):
         validate = session.ctx['message'].extract_plain_text().strip()[12:]
         captcha_lck.release()
 
-swa = 0
+swa = 0 #初始化出刀开关
 boss_status = [0,0,0,0,0]
 in_game = [0,0,0,0,0]
-in_game_old = [0,0,0,0,0]
-pre_push = [[],[],[],[],[]]
-coin = 0
-arrow = 0
-tvid = 0
+in_game_old = [0,0,0,0,0]   #实战中
+pre_push = [[],[],[],[],[]] #预约组
+coin = 0    #会战币
+arrow = 0   #出刀ID
+tvid = 0    #玩家ID
 sw = 0      #会战推送开关
-fnum = 0
-arrow_rec = 0
-side = {
+fnum = 0    #实战人数
+arrow_rec = 0   #出刀记录
+renew_coin = True
+side = {    
     1: 'A',
     4: 'B',
     11: 'C',
     31: 'D',
     41: 'E'    
-}
+}   #阶段数
 phase = {
     1: 1,
     4: 2,
     11: 3,
     31: 4,
     41: 5   
-}
+}   #阶段周目
 curr_side = '_'
 max_chat_list = 20
 
 @sv.scheduled_job('interval', seconds=20)
 async def teafak():
-    global coin,arrow_rec,side,curr_side,arrow,sw,pre_push,fnum,forward_group_list,boss_status,in_game,tvid,experimental
+    global coin,arrow_rec,side,curr_side,arrow,sw,pre_push,fnum,forward_group_list,boss_status,in_game,tvid,experimental,renew_coin
     try:
         load_index = 0
         if sw == 0:     #会战推送开关
             return
-        if coin == 0:   #初始化获取硬币数
+        if coin == 0 or renew_coin == True:   #初始化获取硬币数/检测到boss状态发生变化后更新会战币
             item_list = {}
             await verify()
             load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})   #获取会战币api
@@ -146,6 +147,7 @@ async def teafak():
             for item in load_index["item_list"]:
                 item_list[item["id"]] = item["stock"]
             coin = item_list[90006]
+            
         msg = ''
         ref = 0
         res = 0
@@ -157,6 +159,7 @@ async def teafak():
                 clan_id = clan_info['clan']['detail']['clan_id']
                 res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
                 ref = 1
+                renew_coin = False
             except Exception as e:
                 if ('连接中断' or '发生了错误(E)') in str(e):
                     for forward_group in forward_group_list:
@@ -225,7 +228,7 @@ async def teafak():
                         line = line.split(',')
                         if line[0] != 'SL':
                             arrow = int(line[4])
-                            print(arrow)
+                            #print(arrow)
                 #file.close()
             clan_battle_id = pre_clan_battle_id['clan_battle_id']
             in_battle = []
@@ -255,7 +258,9 @@ async def teafak():
                     ifkill = ''     #击杀变成可读
                     if kill == 1:
                         ifkill = '并击破'
+                        in_game_old[boss-1] = 0
                         #push = True
+                        renew_coin = True   #第二次获取时顺带刷新会战币数量
                     
                     for st in phase:
                         if lap >= st:
@@ -270,7 +275,7 @@ async def teafak():
                         if tl['battle_end_time'] == ctime:
                             blid1 = tl['battle_log_id']
                             tvid = tl['target_viewer_id']
-                            print(blid1)
+                            #print(blid1)
                             blid = await client.callapi('/clan_battle/timeline_report', {'target_viewer_id': tvid, 'clan_battle_id': clan_battle_id, 'battle_log_id': int(blid1)})
                             start_time = blid['start_remain_time']
                             used_time = blid['battle_time']
@@ -309,7 +314,9 @@ async def teafak():
                         if ib[1] == 1:
                             in_game_old[ib[0]-1] = 0
                     
-                    
+
+
+
             if change == True:
                 if acinfo['ingame_calc_mode'] == 1:
                     msg += f'当前实战人数发生变化:\n[{in_game_old[0]}][{in_game_old[1]}][{in_game_old[2]}][{in_game_old[3]}][{in_game_old[4]}]'
@@ -1419,6 +1426,16 @@ async def chat_board(bot,ev):
             await bot.send(ev,msg)
             return
 
+@sv.on_fullmatch('清空留言板')
+async def clear_chat(bot,ev):
+    qid = ev.group_id
+    u_priv = priv.get_user_priv(ev)
+    if u_priv < sv.manage_priv and acinfo["only_admin"] == 1:
+        await bot.send(ev,'权限不足，当前指令仅管理员可用!')
+        return
+    del chat_list[qid]
+    await bot.send(ev,'已清空本群记录')
+
 @sv.on_fullmatch('出刀时段统计')
 async def stats1(bot,ev):
     BTime = Image.new("RGBA",(1020,520),'#FFE4C4')
@@ -1468,3 +1485,4 @@ async def stats1(bot,ev):
     img = pic2b64(BTime)
     img = MessageSegment.image(img)        
     await bot.send(ev,img)
+
