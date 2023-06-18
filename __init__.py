@@ -130,7 +130,7 @@ phase = {
 }   #阶段周目
 curr_side = '_'
 max_chat_list = 20
-health_list = [[6000000,8000000,10000000,12000000,15000000],[6000000,8000000,10000000,12000000,15000000],[10000000,11000000,16000000,18000000,22000000],[18000000,19000000,22000000,23000000,26000000],[85000000,90000000,95000000,100000000,110000000]]
+health_list = [[6000000,8000000,10000000,12000000,15000000],[6000000,8000000,10000000,12000000,15000000],[12000000,14000000,17000000,19000000,22000000],[19000000,20000000,23000000,25000000,27000000],[85000000,90000000,95000000,100000000,110000000]]
 
 
 @sv.scheduled_job('interval', seconds=20)
@@ -480,7 +480,7 @@ async def cout(bot , ev):
 
 @sv.on_prefix('会战状态')    #这个更是重量级
 async def status(bot,ev):
-    global sw,health_list,phase
+    global sw,health_list,phase,chat_list
     u_priv = priv.get_user_priv(ev)
     if u_priv < sv.manage_priv and acinfo["only_admin"] == 1:
         await bot.send(ev,'权限不足，当前指令仅管理员可用!')
@@ -833,26 +833,29 @@ async def status(bot,ev):
                         draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="black")
                     else:
                         draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="purple")
-                    if order == 1:
-                        res3 = await client.callapi('/clan_battle/history_report', {'clan_id': clan_id, 'history_id': int(arrow)})
-                        print(res3)
-                        row = 0
-                        for hi in res3['history_report']:
-                            hvid = hi['viewer_id']
-                            #hunit_id = hi['unit_id'] 
-                            if hvid != 0:
-                                hstars = hi['unit_rarity']
-                                hdmg = hi['damage']
-                                favorid = str(hi['unit_id'])[:-2]
-                                stars = 3 if hstars != 6 else 6
-                                try:
-                                    img2 = R.img(f'priconne/unit/icon_unit_{favorid}{stars}1.png').open()
-                                    img2 = img2.resize((48,48),Image.ANTIALIAS)
-                                    img.paste(img2, (1320,761+int(59.8*row)))
-                                except:
-                                    pass
-                                draw.text((1380,761+int(59.8*row)), f'伤害{hdmg}', font=setFont, fill="#A020F0")
-                                row += 1
+                    gid = ev.group_id
+                    
+                    # if order == 1:
+                    #     res3 = await client.callapi('/clan_battle/history_report', {'clan_id': clan_id, 'history_id': int(arrow)})
+                    #     print(res3)
+                    #     row = 0
+                    #     for hi in res3['history_report']:
+                    #         hvid = hi['viewer_id']
+                    #         #hunit_id = hi['unit_id'] 
+                    #         if hvid != 0:
+                    #             hstars = hi['unit_rarity']
+                    #             hdmg = hi['damage']
+                    #             favorid = str(hi['unit_id'])[:-2]
+                    #             stars = 3 if hstars != 6 else 6
+                    #             try:
+                    #                 img2 = R.img(f'priconne/unit/icon_unit_{favorid}{stars}1.png').open()
+                    #                 img2 = img2.resize((48,48),Image.ANTIALIAS)
+                    #                 img.paste(img2, (1320,761+int(59.8*row)))
+                    #             except:
+                    #                 pass
+                    #             draw.text((1380,761+int(59.8*row)), f'伤害{hdmg}', font=setFont, fill="#A020F0")
+                    #             row += 1
+
             draw.text((1320, 230), f'当前{next_lap_1}周目', font=setFont, fill="#A020F0")            
             
             fnum1 = -1
@@ -1230,8 +1233,8 @@ async def query_line(bot,ev):
             lap = 0
             boss = 0
             
-            stage = [207300000,859700000,5198900000,9221900000,999999999999]
-            l1 = [[7200000,9600000,13000000,16800000,22500000],[9600000,12800000,18000000,22800000,30000000],[20000000,22000000,38400000,43200000,57200000],[63000000,66500000,81400000,87400000,104000000],[297500000,315000000,351500000,380000000,440000000]]
+            stage = [207300000,859700000,4771700000,9017700000,999999999999]
+            l1 = [[7200000,9600000,13000000,16800000,22500000],[9600000,12800000,18000000,22800000,30000000],[24000000,28000000,40800000,45600000,57200000],[66500000,70000000,85100000,95000000,108000000],[297500000,315000000,351500000,380000000,440000000]]
             lp = [3,10,30,40,999]
             
             for rank in page_info['period_ranking']:
