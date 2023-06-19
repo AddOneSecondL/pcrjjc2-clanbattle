@@ -833,7 +833,29 @@ async def status(bot,ev):
                         draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="black")
                     else:
                         draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="purple")
-                    gid = ev.group_id
+            #留言部分
+            qid = ev.group_id
+            if qid not in chat_list:
+                draw.text((1380,761), f'本群暂时没有留言！', font=setFont, fill="#A020F0")
+            else:
+                msg = '留言板：\n'
+                for i in range(0,len(chat_list[qid]["uid"])):
+                    time_now = int(time.time())
+                    time_diff = time_now - chat_list[qid]["time"][i]
+                    if time_diff <= 60:
+                        time_diff = '刚刚'
+                    else:
+                        time_diff = int(time_diff/60)
+                        time_diff = f'{time_diff}分钟前'
+                    nickname = chat_list[qid]["uid"][i]
+                    try:
+                        nickname = await bot.get_group_member_info(group_id = qid,user_id = (chat_list[qid]["uid"][i]))
+                        nickname = nickname['nickname']
+                    except:
+                        pass
+                    chat = chat_list[qid]["text"][i]
+                    msg += f'[{time_diff}]{nickname}:{chat}\n'
+                draw.text((1380,761), f'{msg}', font=setFont, fill="#A020F0")
                     
                     # if order == 1:
                     #     res3 = await client.callapi('/clan_battle/history_report', {'clan_id': clan_id, 'history_id': int(arrow)})
