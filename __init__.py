@@ -1447,8 +1447,8 @@ async def chat_board(bot,ev):
                 pass
             chat = chat_list[qid]["text"][i]
             msg += f'[{time_diff}]{nickname}:{chat}\n'
-            await bot.send(ev,msg)
-    return
+        await bot.send(ev,msg)
+        return
 
 @sv.on_fullmatch('清空留言板')
 async def clear_chat(bot,ev):
