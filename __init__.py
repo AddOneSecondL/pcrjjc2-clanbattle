@@ -23,6 +23,7 @@ from hoshino.modules.priconne import chara
 from hoshino.modules.priconne._pcr_data import CHARA_NAME
 from PIL import Image, ImageDraw, ImageFont, ImageChops, ImageFilter, ImageOps
 from hoshino import util
+import datetime
 sv_help = '''
 [游戏内会战推送] 无描述
 '''.strip()
@@ -102,6 +103,7 @@ async def validate(session):
         validate = session.ctx['message'].extract_plain_text().strip()[12:]
         captcha_lck.release()
 
+boss_icon_list = []
 swa = 0 #初始化出刀开关
 boss_status = [0,0,0,0,0]
 in_game = [0,0,0,0,0]
@@ -351,6 +353,15 @@ async def sw_pus(bot , ev):
         return
     if sw == 0:
         sw = 1
+        if boss_icon_list == []:
+            try:
+                date = datetime.date.today()
+                dyear = date.year
+                dmonth = date.month
+                await get_boss_icon(dyear,dmonth)
+            except:
+                await bot.send(ev,'获取当期BOSS头像失败')
+                pass
         await bot.send(ev,'已开启会战推送')
     else:
         sw = 0
@@ -360,9 +371,41 @@ async def sw_pus(bot , ev):
 @sv.on_fullmatch('初始化会战推送')  #会战前一天输入这个
 async def sw_pus(bot , ev):
     global swa
+    date = datetime.date.today()
+    dyear = date.year
+    dmonth = date.month
+    try:
+        await get_boss_icon(dyear,dmonth)
+    except:
+        await bot.send(ev,'获取当期BOSS头像失败')
+        pass
     swa = 1
     await bot.send(ev,'初始化完成')
-    
+
+
+
+async def get_boss_icon(dyear,dmonth):
+    global boss_icon_list
+    url = 'https://pcr.satroki.tech/api/Quest/GetClanBattleInfos?s=cn'
+    res = requests.get(url).json()
+    for cres in res:
+        if cres["year"] == dyear and cres["month"] == dmonth:
+            battle_title = cres["title"]
+            boss_icon_list = []
+            boss_phase = cres["phases"][0]["bosses"]
+            print(boss_phase)
+            for bp in boss_phase:
+                boss_icon_list.append(bp["unitId"])
+    base = 'https://redive.estertion.win/icon/unit/'
+    save_dir = current_folder
+    for i in boss_icon_list:
+        res = requests.get(base+str(i)+'.webp')
+        with open(current_folder + f'/{i}.png', 'wb') as img:
+            img.write(res.content)
+            img.close()
+
+
+
 @sv.on_prefix('会战预约')   #会战预约5
 async def preload(bot , ev):
     global pre_push,sw
@@ -573,7 +616,7 @@ async def status(bot,ev):
             img.paste(hp_bar, (80, 40 + (boss_num - 1) * 142), hp_bar)
             try:    #晚点改
                 try:
-                    img2 = R.img(f'priconne/unit/{boss_ooo[img_num]}.png').open()
+                    img2 = Image.open(current_folder+f'/{boss_icon_list[img_num]}.png')
                 except:
                     img2 = R.img(f'priconne/unit/icon_unit_100131.png').open()
                 img_num += 1
