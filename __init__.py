@@ -24,6 +24,7 @@ from hoshino.modules.priconne._pcr_data import CHARA_NAME
 from PIL import Image, ImageDraw, ImageFont, ImageChops, ImageFilter, ImageOps
 from hoshino import util
 import datetime
+import sqlite3
 sv_help = '''
 [游戏内会战推送] 无描述
 '''.strip()
@@ -1577,3 +1578,24 @@ async def stats1(bot,ev):
     img = MessageSegment.image(img)        
     await bot.send(ev,img)
 
+async def pre():
+    conn = sqlite3.connect('yobotdata_new.db')
+    cursor = conn.cursor()
+    for line in open("Output.txt",encoding='utf-8'):
+        values = line.split(",")
+        if values[0] == 'SL':
+            continue
+        cursor.execute("SELECT cid FROM clan_challenge ORDER BY cid DESC LIMIT 1")
+        cid = (cursor.fetchone())[0] + 1
+        boss_cycle = values[7]
+        boss_num = values[8]
+        if values[10] == 1:
+            remain = 0
+        else:
+            remain = 1
+        damage = values[9]
+        is_continue = 0
+        #row_data = (cid, bid, gid, qqid, 0, 0, boss_cycle, boss_num, remain, damage, is_continue)
+        #cursor.execute("INSERT INTO clan_challenge (cid, bid, gid, qqid, challenge_pcrdate, challenge_pcrtime, boss_cycle, boss_num, boss_health_remain, challenge_damage, is_continue) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", row_data)
+        conn.commit()
+    conn.close()
