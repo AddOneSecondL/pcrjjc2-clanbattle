@@ -143,7 +143,7 @@ async def teafak():
         load_index = 0
         if sw == 0:     #会战推送开关
             return
-        if coin == 0 or renew_coin == True:   #初始化获取硬币数/检测到boss状态发生变化后更新会战币
+        if coin == 0 or renew_coin > 0:   #初始化获取硬币数/检测到boss状态发生变化后更新会战币
             item_list = {}
             await verify()
             load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})   #获取会战币api
@@ -164,7 +164,8 @@ async def teafak():
                 clan_id = clan_info['clan']['detail']['clan_id']
                 res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
                 ref = 1
-                renew_coin = False
+                if renew_coin > 0:
+                    renew_coin -= 1
             except Exception as e:
                 if ('连接中断' or '发生了错误(E)') in str(e):
                     for forward_group in forward_group_list:
@@ -265,7 +266,7 @@ async def teafak():
                         ifkill = '并击破'
                         in_game_old[boss-1] = 0
                         #push = True
-                        renew_coin = True   #第二次获取时顺带刷新会战币数量
+                        renew_coin = 2   #第二次获取时顺带刷新会战币数量
                     
                     for st in phase:
                         if lap >= st:
@@ -323,6 +324,7 @@ async def teafak():
 
 
             if change == True:
+                renew_coin = 15
                 if acinfo['ingame_calc_mode'] == 1:
                     msg += f'当前实战人数发生变化:\n[{in_game_old[0]}][{in_game_old[1]}][{in_game_old[2]}][{in_game_old[3]}][{in_game_old[4]}]'
                 else:
