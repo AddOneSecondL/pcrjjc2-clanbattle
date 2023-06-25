@@ -779,7 +779,7 @@ async def status(bot,ev):
                             dmgcheck = 0
                             for check in open(current_folder + "/Output.txt",encoding='utf-8'):
                                 if check != '':
-                                    check = line.split(',')
+                                    check = check.split(',')
                                     if check[0] != 'SL' and (check[7] == re_lap and check[8] == re_boss):
                                         dmgcheck += check[9]
                             for st in phase:
