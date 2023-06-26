@@ -1,6 +1,14 @@
 {
-    "account": "",
-    "password": "",
+    "account_list":[
+        {
+            "account":"123456",
+            "password":"abcdefg"
+        },
+        {
+            "account":"654321",
+            "password":"gfedcba"
+        }
+    ],
     "platform": 2,
     "channel": 1,
     "admin": 0,

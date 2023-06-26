@@ -28,7 +28,7 @@ import sqlite3
 sv_help = '''
 [游戏内会战推送] 无描述
 '''.strip()
-sv = SafeService('会战推送',help_=sv_help, bundle='pcr查询')
+sv = SafeService('会战推送', help_=sv_help, bundle='pcr查询')
 curpath = dirname(__file__)
 ##############################下面这个框填要推送的群
 forward_group_list = []
@@ -83,8 +83,14 @@ async def errlogger(msg):
         message = f'pcrjjc2登录错误：{msg}'
     )
 
-bclient = bsdkclient(acinfo, captchaVerifier, errlogger)
-client = pcrclient(bclient)
+clients = {}
+for account_info in acinfo["account_list"]:
+    account = account_info["account"]
+    password = account_info["password"]
+    bClient = bsdkclient(acinfo, captchaVerifier, errlogger, account, password)
+    clients[account] = pcrclient(bClient)
+define_account = acinfo["account_list"][0]["account"]
+client:pcrclient = clients[define_account]
 
 qlck = Lock()
 
@@ -234,7 +240,7 @@ async def teafak():
                         line = line.split(',')
                         if line[0] != 'SL':
                             arrow = int(line[4])
-                            #print(arrow)
+                            # print(arrow)
                 #file.close()
             clan_battle_id = pre_clan_battle_id['clan_battle_id']
             in_battle = []
@@ -281,7 +287,7 @@ async def teafak():
                         if tl['battle_end_time'] == ctime:
                             blid1 = tl['battle_log_id']
                             tvid = tl['target_viewer_id']
-                            #print(blid1)
+                            # print(blid1)
                             blid = await client.callapi('/clan_battle/timeline_report', {'target_viewer_id': tvid, 'clan_battle_id': clan_battle_id, 'battle_log_id': int(blid1)})
                             start_time = blid['start_remain_time']
                             used_time = blid['battle_time']
@@ -319,9 +325,6 @@ async def teafak():
                             in_game_old[ib[0]-1] -= 1
                         if ib[1] == 1:
                             in_game_old[ib[0]-1] = 0
-                    
-
-
 
             if change == True:
                 renew_coin = 15
@@ -464,7 +467,7 @@ async def sw_plist(bot , ev):
         msg += f'{num}王预约列表\n'
         for pp in p:
             pp = pp.split('|')
-            print(pp)
+            # print(pp)
             pp1 = int(pp[0])
             pp2 = int(pp[1])
             
@@ -523,6 +526,16 @@ async def cout(bot , ev):
     await bot.upload_group_file(group_id = ev.group_id, file = cfile, name = name)
     await bot.send(ev, '上传完成')
 
+@sv.on_rex(r'^切换账号(?: |)([\s\S]*)')
+async def status(bot, ev):
+    match = ev['match']
+    if not match : return
+
+    account = match.group(1)
+    if account not in clients: return await bot.send(ev, '不存在该账号')
+    global client
+    client = clients[account]
+    await bot.send(ev, '切换成功')
 
 @sv.on_prefix('会战状态')    #这个更是重量级
 async def status(bot,ev):
@@ -580,10 +593,16 @@ async def status(bot,ev):
         
         load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
         clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
-        clan_id = clan_info['clan']['detail']['clan_id']
+        try:
+            clan_id = clan_info['clan']['detail']['clan_id']                    #报错 KeyError: 'clan'
+        except:
+            return await bot.send(ev, "报错了，请重试")
         item_list = {}
-        for item in load_index["item_list"]:
-            item_list[item["id"]] = item["stock"]
+        try:
+            for item in load_index["item_list"]:                    #报错 KeyError: 'item_list'
+                item_list[item["id"]] = item["stock"]
+        except:
+            return await bot.send(ev, "报错了，请重试")
         coin = item_list[90006]   
         res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
         clan_battle_id = res['clan_battle_id']
@@ -734,7 +753,7 @@ async def status(bot,ev):
             for line in open(current_folder + "/Output.txt",encoding='utf-8'):
                 if line != '':
                     line = line.split(',')
-                    print(line[0])
+                    # print(line[0])
                     if line[0] == 'SL':
                         mode = 1
                         re_vid = int(line[2])
@@ -814,7 +833,7 @@ async def status(bot,ev):
             elif 0< kill_acc < 3:
                 draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#FF00FF")
             elif kill_acc == 3:
-                draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#00FF00")
+                draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#FFFF00")
             #print(half_sign)
             width2 = 0
             kill_acc = kill_acc - half_sign
@@ -1228,7 +1247,7 @@ async def query_line(bot,ev):
     try:
         goal_list = []
         if re.match("^[0-9,]+$", goal):
-            print('mode1')
+            # print('mode1')
             rank_mode = 1
             if ',' in goal:
                 goal_list = goal.split(',')
@@ -1253,7 +1272,7 @@ async def query_line(bot,ev):
                 
                 if clan_num <= 4:
                     clan_id = clan['clan_id']
-                    print(clan_id)
+                    # print(clan_id)
                     if clan_id == 0:
                         break
                     clan_most_info = await client.callapi('/clan/others_info', {'clan_id': clan_id})
@@ -1273,7 +1292,7 @@ async def query_line(bot,ev):
         width2 = 500*len(goal_list)
         img4 = Image.new('RGB', (1000, width2), (255, 255, 255))    
         all_num = 0
-        print(len(goal_list))
+        # print(len(goal_list))
         for goal in goal_list:
             goal = int(goal)
             item_list = {}
@@ -1342,7 +1361,7 @@ async def query_line(bot,ev):
                     progress = (float(final_dmg/i)*100)
                     progress = round(progress, 2)
                     msg = f'当前第 {lap} 阶段 | 第 {final_lap} 周目 {boss+1} 王 | 进度 {progress}%'
-                    print(msg)
+                    # print(msg)
                     
                     R_n = 0
                     for RA in RANK_LST:
