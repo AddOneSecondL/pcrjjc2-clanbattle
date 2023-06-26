@@ -56,23 +56,22 @@ class bsdkclient:
             'channel': 1, # indicates bilibili channel
         }
     '''
-    def __init__(self, acccountinfo, captchaVerifier, errlogger):
-        self.account = acccountinfo['account']
-        self.pwd = acccountinfo['password']
+    def __init__(self, acccountinfo, captchaVerifier, errlogger, account, password):
+        self.account = account
+        self.pwd = password
         self.platform = acccountinfo['platform']
         self.channel = acccountinfo['channel']
         self.captchaVerifier = captchaVerifier
         self.errlogger = errlogger
     async def login(self):
         while True:
-            resp = await login(self.account, self.pwd, self.captchaVerifier)
-            if resp['code'] == 0:
-                break
-            await self.errlogger(resp['message'])
-        
-        return resp['uid'], resp['access_key']
-        
-    
+            try:
+                resp = await login(self.account, self.pwd, self.captchaVerifier)
+                if resp['code'] == 0: return resp['uid'], resp['access_key']
+                await self.errlogger(resp['message'])
+            except Exception as e: print(e)
+
+
 class pcrclient:
     def __init__(self, bsclient: bsdkclient):
         self.viewer_id = 0
