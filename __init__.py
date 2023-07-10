@@ -1,4 +1,4 @@
-from json import load, dump
+from json import load, dump, loads
 from io import BytesIO
 import json
 import requests
@@ -8,7 +8,7 @@ from nonebot import get_bot, on_command
 from hoshino import priv, R
 from hoshino.typing import NoticeSession, MessageSegment, CQHttpError
 from .pcrclient import pcrclient, ApiException, bsdkclient
-from asyncio import Lock
+from asyncio import Lock, sleep
 from os.path import dirname, join, exists
 from copy import deepcopy
 from traceback import format_exc
@@ -25,6 +25,7 @@ from PIL import Image, ImageDraw, ImageFont, ImageChops, ImageFilter, ImageOps
 from hoshino import util
 import datetime
 import sqlite3
+from .aiorequests import get
 sv_help = '''
 [游戏内会战推送] 无描述
 '''.strip()
@@ -54,6 +55,90 @@ validate = None
 validating = False
 acfirst = False
 
+#同步pcrjjc2自动过码
+async def captchaVerifierV2(gt, challenge, userid):
+    global validating
+
+    validating = True
+    captcha_cnt = 0
+    while captcha_cnt < 5:
+        captcha_cnt += 1
+        #try:
+        sv.logger.info(f'测试新版自动过码中，当前尝试第{captcha_cnt}次。')
+
+        await sleep(1)
+
+        url = f"https://pcrd.tencentbot.top/geetest_renew?captcha_type=1&challenge={challenge}&gt={gt}&userid={userid}&gs=1"
+        header = {"Content-Type": "application/json", "User-Agent": "pcrjjc2/1.0.0"}
+        # uuid = loads(await (await get(url="https://pcrd.tencentbot.top/geetest")).content)["uuid"]
+        # print(f'uuid={uuid}')
+
+        res = await (await aiorequests.get(url=url, headers=header)).content
+        res = loads(res)
+        uuid = res["uuid"]
+        msg = [f"uuid={uuid}"]
+        
+        ccnt = 0
+        while ccnt < 10:
+            ccnt += 1
+            res = await (await aiorequests.get(url=f"https://pcrd.tencentbot.top/check/{uuid}", headers=header)).content
+            #if str(res.status_code) != "200":
+            #    continue
+            # print(res)
+            res = loads(res)
+            if "queue_num" in res:
+                nu = res["queue_num"]
+                msg.append(f"queue_num={nu}")
+                tim = min(int(nu), 3) * 10
+                msg.append(f"sleep={tim}")
+                #await bot.send_private_msg(user_id=acinfo['admin'], message=f"thread{ordd}: \n" + "\n".join(msg))
+                # print(f"pcrjjc2:\n" + "\n".join(msg))
+                msg = []
+                # print(f'farm: {uuid} in queue, sleep {tim} seconds')
+                await sleep(tim)
+            else:
+                info = res["info"]
+                if info in ["fail", "url invalid"]:
+                    break
+                elif info == "in running":
+                    await sleep(5)
+                elif 'validate' in info:
+                    print(f'info={info}')
+                    validating = False
+                    return (info["challenge"], info["gt_user_id"], info["validate"])
+            if ccnt >= 10:
+                raise Exception("Captcha failed")
+
+            # ccnt = 0
+            # while ccnt < 3:
+            #     ccnt += 1
+            #     await sleep(5)
+            #     res = await (await get(url=f"https://pcrd.tencentbot.top/check/{uuid}")).content
+            #     res = loads(res)
+            #     if "queue_num" in res:
+            #         nu = res["queue_num"]
+            #         print(f"queue_num={nu}")
+            #         tim = min(int(nu), 3) * 5
+            #         print(f"sleep={tim}")
+            #         await sleep(tim)
+            #     else:
+            #         info = res["info"]
+            #         if info in ["fail", "url invalid"]:
+            #             break
+            #         elif info == "in running":
+            #             await sleep(5)
+            #         else:
+            #             print(f'info={info}')
+            #             validating = False
+            #             return info["challenge"], info["gt_user_id"], info["validate"]
+        # except:
+        #     pass
+
+    # await sendToAdmin(
+    #     f'自动过码多次尝试失败，可能为服务器错误，自动切换为手动。\n确实服务器无误后，可发送/pcrval重新触发自动过码。')
+    validate = await captchaVerifier(gt, challenge, userid)
+    validating = False
+    return challenge, userid, validate
 
 async def captchaVerifier(gt, challenge, userid):
     global acfirst, validating
@@ -87,7 +172,7 @@ clients = {}
 for account_info in acinfo["account_list"]:
     account = account_info["account"]
     password = account_info["password"]
-    bClient = bsdkclient(acinfo, captchaVerifier, errlogger, account, password)
+    bClient = bsdkclient(acinfo, captchaVerifierV2, errlogger, account, password)
     clients[account] = pcrclient(bClient)
 define_account = acinfo["account_list"][0]["account"]
 client:pcrclient = clients[define_account]
@@ -110,6 +195,9 @@ async def validate(session):
         validate = session.ctx['message'].extract_plain_text().strip()[12:]
         captcha_lck.release()
 
+
+
+#本人编程初学者，以下答辩代码警告
 boss_icon_list = []
 swa = 0 #初始化出刀开关
 boss_status = [0,0,0,0,0]
