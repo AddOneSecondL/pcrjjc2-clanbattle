@@ -1,4 +1,4 @@
-from json import load, dump
+from json import load, dump, loads
 from io import BytesIO
 import json
 import requests
@@ -8,7 +8,7 @@ from nonebot import get_bot, on_command
 from hoshino import priv, R
 from hoshino.typing import NoticeSession, MessageSegment, CQHttpError
 from .pcrclient import pcrclient, ApiException, bsdkclient
-from asyncio import Lock
+from asyncio import Lock, sleep
 from os.path import dirname, join, exists
 from copy import deepcopy
 from traceback import format_exc
@@ -23,10 +23,13 @@ from hoshino.modules.priconne import chara
 from hoshino.modules.priconne._pcr_data import CHARA_NAME
 from PIL import Image, ImageDraw, ImageFont, ImageChops, ImageFilter, ImageOps
 from hoshino import util
+import datetime
+import sqlite3
+from .aiorequests import get
 sv_help = '''
 [游戏内会战推送] 无描述
 '''.strip()
-sv = SafeService('会战推送',help_=sv_help, bundle='pcr查询')
+sv = SafeService('会战推送', help_=sv_help, bundle='pcr查询')
 curpath = dirname(__file__)
 ##############################下面这个框填要推送的群
 forward_group_list = []
@@ -52,6 +55,90 @@ validate = None
 validating = False
 acfirst = False
 
+#同步pcrjjc2自动过码
+async def captchaVerifierV2(gt, challenge, userid):
+    global validating
+
+    validating = True
+    captcha_cnt = 0
+    while captcha_cnt < 5:
+        captcha_cnt += 1
+        #try:
+        sv.logger.info(f'测试新版自动过码中，当前尝试第{captcha_cnt}次。')
+
+        await sleep(1)
+
+        url = f"https://pcrd.tencentbot.top/geetest_renew?captcha_type=1&challenge={challenge}&gt={gt}&userid={userid}&gs=1"
+        header = {"Content-Type": "application/json", "User-Agent": "pcrjjc2/1.0.0"}
+        # uuid = loads(await (await get(url="https://pcrd.tencentbot.top/geetest")).content)["uuid"]
+        # print(f'uuid={uuid}')
+
+        res = await (await aiorequests.get(url=url, headers=header)).content
+        res = loads(res)
+        uuid = res["uuid"]
+        msg = [f"uuid={uuid}"]
+        
+        ccnt = 0
+        while ccnt < 10:
+            ccnt += 1
+            res = await (await aiorequests.get(url=f"https://pcrd.tencentbot.top/check/{uuid}", headers=header)).content
+            #if str(res.status_code) != "200":
+            #    continue
+            # print(res)
+            res = loads(res)
+            if "queue_num" in res:
+                nu = res["queue_num"]
+                msg.append(f"queue_num={nu}")
+                tim = min(int(nu), 3) * 10
+                msg.append(f"sleep={tim}")
+                #await bot.send_private_msg(user_id=acinfo['admin'], message=f"thread{ordd}: \n" + "\n".join(msg))
+                # print(f"pcrjjc2:\n" + "\n".join(msg))
+                msg = []
+                # print(f'farm: {uuid} in queue, sleep {tim} seconds')
+                await sleep(tim)
+            else:
+                info = res["info"]
+                if info in ["fail", "url invalid"]:
+                    break
+                elif info == "in running":
+                    await sleep(5)
+                elif 'validate' in info:
+                    print(f'info={info}')
+                    validating = False
+                    return (info["challenge"], info["gt_user_id"], info["validate"])
+            if ccnt >= 10:
+                raise Exception("Captcha failed")
+
+            # ccnt = 0
+            # while ccnt < 3:
+            #     ccnt += 1
+            #     await sleep(5)
+            #     res = await (await get(url=f"https://pcrd.tencentbot.top/check/{uuid}")).content
+            #     res = loads(res)
+            #     if "queue_num" in res:
+            #         nu = res["queue_num"]
+            #         print(f"queue_num={nu}")
+            #         tim = min(int(nu), 3) * 5
+            #         print(f"sleep={tim}")
+            #         await sleep(tim)
+            #     else:
+            #         info = res["info"]
+            #         if info in ["fail", "url invalid"]:
+            #             break
+            #         elif info == "in running":
+            #             await sleep(5)
+            #         else:
+            #             print(f'info={info}')
+            #             validating = False
+            #             return info["challenge"], info["gt_user_id"], info["validate"]
+        # except:
+        #     pass
+
+    # await sendToAdmin(
+    #     f'自动过码多次尝试失败，可能为服务器错误，自动切换为手动。\n确实服务器无误后，可发送/pcrval重新触发自动过码。')
+    validate = await captchaVerifier(gt, challenge, userid)
+    validating = False
+    return challenge, userid, validate
 
 async def captchaVerifier(gt, challenge, userid):
     global acfirst, validating
@@ -62,11 +149,14 @@ async def captchaVerifier(gt, challenge, userid):
     if acinfo['admin'] == 0:
         bot.logger.error('captcha is required while admin qq is not set, so the login can\'t continue')
     else:
-        url = f"https://cc004.github.io/geetest/geetest.html?captcha_type=1&challenge={challenge}&gt={gt}&userid={userid}&gs=1"
-        await bot.send_private_msg(
-            user_id = acinfo['admin'],
-            message = f'pcr账号登录需要验证码，请完成以下链接中的验证内容后将第一行validate=后面的内容复制，并用指令/pcrvalclan xxxx将内容发送给机器人完成验证\n验证链接：{url}'
-        )
+        url = f"链接头：https://cc004.github.io/geetest/geetest.html\n链接：?captcha_type=1&challenge={challenge}&gt={gt}&userid={userid}&gs=1"
+        if int(acinfo["captcha_group"]) != 0:
+            await bot.send_group_msg(group_id = acinfo["captcha_group"],message = f'pcr账号登录需要验证码，请完成以下链接中的验证内容后将第一行validate=后面的内容复制，并用指令/pcrvalclan xxxx将内容发送给机器人完成验证\n为避免tx网页安全验证使验证码过期，请手动拼接链接头和链接：{url}\n※注意：请私聊BOT发送')
+        else:
+            await bot.send_private_msg(
+                user_id = acinfo['admin'],
+                message = f'pcr账号登录需要验证码，请完成以下链接中的验证内容后将第一行validate=后面的内容复制，并用指令/pcrvalclan xxxx将内容发送给机器人完成验证\n为避免tx网页安全验证使验证码过期，请手动拼接链接头和链接：{url}'
+            )
     validating = True
     await captcha_lck.acquire()
     validating = False
@@ -78,8 +168,14 @@ async def errlogger(msg):
         message = f'pcrjjc2登录错误：{msg}'
     )
 
-bclient = bsdkclient(acinfo, captchaVerifier, errlogger)
-client = pcrclient(bclient)
+clients = {}
+for account_info in acinfo["account_list"]:
+    account = account_info["account"]
+    password = account_info["password"]
+    bClient = bsdkclient(acinfo, captchaVerifierV2, errlogger, account, password)
+    clients[account] = pcrclient(bClient)
+define_account = acinfo["account_list"][0]["account"]
+client:pcrclient = clients[define_account]
 
 qlck = Lock()
 
@@ -99,42 +195,49 @@ async def validate(session):
         validate = session.ctx['message'].extract_plain_text().strip()[12:]
         captcha_lck.release()
 
-swa = 0
+
+
+#本人编程初学者，以下答辩代码警告
+boss_icon_list = []
+swa = 0 #初始化出刀开关
 boss_status = [0,0,0,0,0]
 in_game = [0,0,0,0,0]
-in_game_old = [0,0,0,0,0]
-pre_push = [[],[],[],[],[]]
-coin = 0
-arrow = 0
-tvid = 0
+in_game_old = [0,0,0,0,0]   #实战中
+pre_push = [[],[],[],[],[]] #预约组
+coin = 0    #会战币
+arrow = 0   #出刀ID
+tvid = 0    #玩家ID
 sw = 0      #会战推送开关
-fnum = 0
-arrow_rec = 0
-side = {
+fnum = 0    #实战人数
+arrow_rec = 0   #出刀记录
+renew_coin = True
+side = {    
     1: 'A',
     4: 'B',
     11: 'C',
     31: 'D',
     41: 'E'    
-}
+}   #阶段数
 phase = {
     1: 1,
     4: 2,
     11: 3,
     31: 4,
     41: 5   
-}
+}   #阶段周目
 curr_side = '_'
+max_chat_list = 20
+health_list = [[6000000,8000000,10000000,12000000,15000000],[6000000,8000000,10000000,12000000,15000000],[12000000,14000000,17000000,19000000,22000000],[19000000,20000000,23000000,25000000,27000000],[85000000,90000000,95000000,100000000,110000000]]
 
 
 @sv.scheduled_job('interval', seconds=20)
 async def teafak():
-    global coin,arrow_rec,side,curr_side,arrow,sw,pre_push,fnum,forward_group_list,boss_status,in_game,tvid,experimental
+    global coin,arrow_rec,side,curr_side,arrow,sw,pre_push,fnum,forward_group_list,boss_status,in_game,tvid,experimental,renew_coin
     try:
         load_index = 0
         if sw == 0:     #会战推送开关
             return
-        if coin == 0:   #初始化获取硬币数
+        if coin == 0 or renew_coin > 0:   #初始化获取硬币数/检测到boss状态发生变化后更新会战币
             item_list = {}
             await verify()
             load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})   #获取会战币api
@@ -143,6 +246,7 @@ async def teafak():
             for item in load_index["item_list"]:
                 item_list[item["id"]] = item["stock"]
             coin = item_list[90006]
+            
         msg = ''
         ref = 0
         res = 0
@@ -154,6 +258,8 @@ async def teafak():
                 clan_id = clan_info['clan']['detail']['clan_id']
                 res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
                 ref = 1
+                if renew_coin > 0:
+                    renew_coin -= 1
             except Exception as e:
                 if ('连接中断' or '发生了错误(E)') in str(e):
                     for forward_group in forward_group_list:
@@ -222,7 +328,7 @@ async def teafak():
                         line = line.split(',')
                         if line[0] != 'SL':
                             arrow = int(line[4])
-                            print(arrow)
+                            # print(arrow)
                 #file.close()
             clan_battle_id = pre_clan_battle_id['clan_battle_id']
             in_battle = []
@@ -252,7 +358,9 @@ async def teafak():
                     ifkill = ''     #击杀变成可读
                     if kill == 1:
                         ifkill = '并击破'
+                        in_game_old[boss-1] = 0
                         #push = True
+                        renew_coin = 2   #第二次获取时顺带刷新会战币数量
                     
                     for st in phase:
                         if lap >= st:
@@ -267,7 +375,7 @@ async def teafak():
                         if tl['battle_end_time'] == ctime:
                             blid1 = tl['battle_log_id']
                             tvid = tl['target_viewer_id']
-                            print(blid1)
+                            # print(blid1)
                             blid = await client.callapi('/clan_battle/timeline_report', {'target_viewer_id': tvid, 'clan_battle_id': clan_battle_id, 'battle_log_id': int(blid1)})
                             start_time = blid['start_remain_time']
                             used_time = blid['battle_time']
@@ -305,9 +413,9 @@ async def teafak():
                             in_game_old[ib[0]-1] -= 1
                         if ib[1] == 1:
                             in_game_old[ib[0]-1] = 0
-                    
-                    
+
             if change == True:
+                renew_coin = 15
                 if acinfo['ingame_calc_mode'] == 1:
                     msg += f'当前实战人数发生变化:\n[{in_game_old[0]}][{in_game_old[1]}][{in_game_old[2]}][{in_game_old[3]}][{in_game_old[4]}]'
                 else:
@@ -339,6 +447,15 @@ async def sw_pus(bot , ev):
         return
     if sw == 0:
         sw = 1
+        if boss_icon_list == []:
+            try:
+                date = datetime.date.today()
+                dyear = date.year
+                dmonth = date.month
+                await get_boss_icon(dyear,dmonth)
+            except:
+                await bot.send(ev,'获取当期BOSS头像失败')
+                pass
         await bot.send(ev,'已开启会战推送')
     else:
         sw = 0
@@ -348,9 +465,41 @@ async def sw_pus(bot , ev):
 @sv.on_fullmatch('初始化会战推送')  #会战前一天输入这个
 async def sw_pus(bot , ev):
     global swa
+    date = datetime.date.today()
+    dyear = date.year
+    dmonth = date.month
+    try:
+        await get_boss_icon(dyear,dmonth)
+    except:
+        await bot.send(ev,'获取当期BOSS头像失败')
+        pass
     swa = 1
     await bot.send(ev,'初始化完成')
-    
+
+
+
+async def get_boss_icon(dyear,dmonth):
+    global boss_icon_list
+    url = 'https://pcr.satroki.tech/api/Quest/GetClanBattleInfos?s=cn'
+    res = requests.get(url).json()
+    for cres in res:
+        if cres["year"] == dyear and cres["month"] == dmonth:
+            battle_title = cres["title"]
+            boss_icon_list = []
+            boss_phase = cres["phases"][0]["bosses"]
+            print(boss_phase)
+            for bp in boss_phase:
+                boss_icon_list.append(bp["unitId"])
+    base = 'https://redive.estertion.win/icon/unit/'
+    save_dir = current_folder
+    for i in boss_icon_list:
+        res = requests.get(base+str(i)+'.webp')
+        with open(current_folder + f'/{i}.png', 'wb') as img:
+            img.write(res.content)
+            img.close()
+
+
+
 @sv.on_prefix('会战预约')   #会战预约5
 async def preload(bot , ev):
     global pre_push,sw
@@ -406,7 +555,7 @@ async def sw_plist(bot , ev):
         msg += f'{num}王预约列表\n'
         for pp in p:
             pp = pp.split('|')
-            print(pp)
+            # print(pp)
             pp1 = int(pp[0])
             pp2 = int(pp[1])
             
@@ -465,10 +614,20 @@ async def cout(bot , ev):
     await bot.upload_group_file(group_id = ev.group_id, file = cfile, name = name)
     await bot.send(ev, '上传完成')
 
+@sv.on_rex(r'^切换账号(?: |)([\s\S]*)')
+async def status(bot, ev):
+    match = ev['match']
+    if not match : return
+
+    account = match.group(1)
+    if account not in clients: return await bot.send(ev, '不存在该账号')
+    global client
+    client = clients[account]
+    await bot.send(ev, '切换成功')
 
 @sv.on_prefix('会战状态')    #这个更是重量级
 async def status(bot,ev):
-    global sw
+    global sw,health_list,phase,chat_list
     u_priv = priv.get_user_priv(ev)
     if u_priv < sv.manage_priv and acinfo["only_admin"] == 1:
         await bot.send(ev,'权限不足，当前指令仅管理员可用!')
@@ -522,10 +681,16 @@ async def status(bot,ev):
         
         load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
         clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
-        clan_id = clan_info['clan']['detail']['clan_id']
+        try:
+            clan_id = clan_info['clan']['detail']['clan_id']                    #报错 KeyError: 'clan'
+        except:
+            return await bot.send(ev, "报错了，请重试")
         item_list = {}
-        for item in load_index["item_list"]:
-            item_list[item["id"]] = item["stock"]
+        try:
+            for item in load_index["item_list"]:                    #报错 KeyError: 'item_list'
+                item_list[item["id"]] = item["stock"]
+        except:
+            return await bot.send(ev, "报错了，请重试")
         coin = item_list[90006]   
         res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
         clan_battle_id = res['clan_battle_id']
@@ -561,7 +726,7 @@ async def status(bot,ev):
             img.paste(hp_bar, (80, 40 + (boss_num - 1) * 142), hp_bar)
             try:    #晚点改
                 try:
-                    img2 = R.img(f'priconne/unit/{boss_ooo[img_num]}.png').open()
+                    img2 = Image.open(current_folder+f'/{boss_icon_list[img_num]}.png')
                 except:
                     img2 = R.img(f'priconne/unit/icon_unit_100131.png').open()
                 img_num += 1
@@ -581,11 +746,11 @@ async def status(bot,ev):
             img.paste(bg, (160, 38+(boss_num-1)*142), bg)
             bg_width = 200
             stage_color = {
-                1: 'green',
-                4: 'yellow',
-                11: 'blue',
-                31: 'purple',
-                41: 'red'
+                1: '#83C266',
+                4: '#67A3E5',
+                11: '#D56CB9',
+                31: '#CF4F45',
+                41: '#A465CC'
             }
             for st in side:
                 if boss_lap_num >= st:
@@ -676,7 +841,7 @@ async def status(bot,ev):
             for line in open(current_folder + "/Output.txt",encoding='utf-8'):
                 if line != '':
                     line = line.split(',')
-                    print(line[0])
+                    # print(line[0])
                     if line[0] == 'SL':
                         mode = 1
                         re_vid = int(line[2])
@@ -709,6 +874,7 @@ async def status(bot,ev):
                         sl_sign = 1
                     
                     if int(vid) == int(re_vid) and if_today == True and mode == 2:
+                        full_check = 0
                         if re_start_time == 90 and re_kill == 1:
                             if time_sign >= 1:
                                 time_sign -= 1
@@ -717,6 +883,20 @@ async def status(bot,ev):
                                 continue
                             if re_battle_time <= 20 and re_battle_time != 0:
                                 time_sign += 1
+                            dmgcheck = 0
+                            for check in open(current_folder + "/Output.txt",encoding='utf-8'):
+                                if check != '':
+                                    check = check.split(',')
+                                    if check[0] != 'SL' and (check[7] == re_lap and check[8] == re_boss):
+                                        dmgcheck += check[9]
+                            for st in phase:
+                                if re_lap >= st:
+                                    phases = st
+                            phases = phase[phases] 
+                            if dmgcheck > health_list[phases-1][re_boss-1]:     #总伤害大于BOSS血量，判定为满补
+                                full_check += 1
+
+
                             kill_acc += 0.5
                             half_sign += 0.5
                         elif re_start_time == 90 and re_kill == 0:
@@ -729,7 +909,11 @@ async def status(bot,ev):
                         else:
                             kill_acc += 0.5
                             half_sign -= 0.5
-                    
+            # if full_check != 0:        
+            #     kill_acc -= 0.5*full_check        
+            if kill_acc > 3:    #对满补刀无从下手，先限定三刀补一下
+                kill_acc = 3
+                half_sogn = 0
             all_battle_count += kill_acc
             
             if kill_acc == 0:
@@ -737,7 +921,7 @@ async def status(bot,ev):
             elif 0< kill_acc < 3:
                 draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#FF00FF")
             elif kill_acc == 3:
-                draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#00FF00")
+                draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#FFFF00")
             #print(half_sign)
             width2 = 0
             kill_acc = kill_acc - half_sign
@@ -802,26 +986,51 @@ async def status(bot,ev):
                         draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="black")
                     else:
                         draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="purple")
-                    if order == 1:
-                        res3 = await client.callapi('/clan_battle/history_report', {'clan_id': clan_id, 'history_id': int(arrow)})
-                        print(res3)
-                        row = 0
-                        for hi in res3['history_report']:
-                            hvid = hi['viewer_id']
-                            #hunit_id = hi['unit_id'] 
-                            if hvid != 0:
-                                hstars = hi['unit_rarity']
-                                hdmg = hi['damage']
-                                favorid = str(hi['unit_id'])[:-2]
-                                stars = 3 if hstars != 6 else 6
-                                try:
-                                    img2 = R.img(f'priconne/unit/icon_unit_{favorid}{stars}1.png').open()
-                                    img2 = img2.resize((48,48),Image.ANTIALIAS)
-                                    img.paste(img2, (1320,761+int(59.8*row)))
-                                except:
-                                    pass
-                                draw.text((1380,761+int(59.8*row)), f'伤害{hdmg}', font=setFont, fill="#A020F0")
-                                row += 1
+            #留言部分
+            qid = ev.group_id
+            if qid not in chat_list:
+                draw.text((1380,761), f'本群暂时没有留言！', font=setFont, fill="#A020F0")
+            else:
+                msg = '留言板：\n'
+                for i in range(0,len(chat_list[qid]["uid"])):
+                    time_now = int(time.time())
+                    time_diff = time_now - chat_list[qid]["time"][i]
+                    if time_diff <= 60:
+                        time_diff = '刚刚'
+                    else:
+                        time_diff = int(time_diff/60)
+                        time_diff = f'{time_diff}分钟前'
+                    nickname = chat_list[qid]["uid"][i]
+                    try:
+                        nickname = await bot.get_group_member_info(group_id = qid,user_id = (chat_list[qid]["uid"][i]))
+                        nickname = nickname['nickname']
+                    except:
+                        pass
+                    chat = chat_list[qid]["text"][i]
+                    msg += f'[{time_diff}]{nickname}:{chat}\n'
+                draw.text((1380,761), f'{msg}', font=setFont, fill="#A020F0")
+                    
+                    # if order == 1:
+                    #     res3 = await client.callapi('/clan_battle/history_report', {'clan_id': clan_id, 'history_id': int(arrow)})
+                    #     print(res3)
+                    #     row = 0
+                    #     for hi in res3['history_report']:
+                    #         hvid = hi['viewer_id']
+                    #         #hunit_id = hi['unit_id'] 
+                    #         if hvid != 0:
+                    #             hstars = hi['unit_rarity']
+                    #             hdmg = hi['damage']
+                    #             favorid = str(hi['unit_id'])[:-2]
+                    #             stars = 3 if hstars != 6 else 6
+                    #             try:
+                    #                 img2 = R.img(f'priconne/unit/icon_unit_{favorid}{stars}1.png').open()
+                    #                 img2 = img2.resize((48,48),Image.ANTIALIAS)
+                    #                 img.paste(img2, (1320,761+int(59.8*row)))
+                    #             except:
+                    #                 pass
+                    #             draw.text((1380,761+int(59.8*row)), f'伤害{hdmg}', font=setFont, fill="#A020F0")
+                    #             row += 1
+
             draw.text((1320, 230), f'当前{next_lap_1}周目', font=setFont, fill="#A020F0")            
             
             fnum1 = -1
@@ -1126,7 +1335,7 @@ async def query_line(bot,ev):
     try:
         goal_list = []
         if re.match("^[0-9,]+$", goal):
-            print('mode1')
+            # print('mode1')
             rank_mode = 1
             if ',' in goal:
                 goal_list = goal.split(',')
@@ -1151,7 +1360,7 @@ async def query_line(bot,ev):
                 
                 if clan_num <= 4:
                     clan_id = clan['clan_id']
-                    print(clan_id)
+                    # print(clan_id)
                     if clan_id == 0:
                         break
                     clan_most_info = await client.callapi('/clan/others_info', {'clan_id': clan_id})
@@ -1171,7 +1380,7 @@ async def query_line(bot,ev):
         width2 = 500*len(goal_list)
         img4 = Image.new('RGB', (1000, width2), (255, 255, 255))    
         all_num = 0
-        print(len(goal_list))
+        # print(len(goal_list))
         for goal in goal_list:
             goal = int(goal)
             item_list = {}
@@ -1199,8 +1408,8 @@ async def query_line(bot,ev):
             lap = 0
             boss = 0
             
-            stage = [207300000,859700000,5198900000,9221900000,999999999999]
-            l1 = [[7200000,9600000,13000000,16800000,22500000],[9600000,12800000,18000000,22800000,30000000],[20000000,22000000,38400000,43200000,57200000],[63000000,66500000,81400000,87400000,104000000],[297500000,315000000,351500000,380000000,440000000]]
+            stage = [207300000,859700000,4771700000,9017700000,999999999999]
+            l1 = [[7200000,9600000,13000000,16800000,22500000],[9600000,12800000,18000000,22800000,30000000],[24000000,28000000,40800000,45600000,57200000],[66500000,70000000,85100000,95000000,108000000],[297500000,315000000,351500000,380000000,440000000]]
             lp = [3,10,30,40,999]
             
             for rank in page_info['period_ranking']:
@@ -1240,7 +1449,7 @@ async def query_line(bot,ev):
                     progress = (float(final_dmg/i)*100)
                     progress = round(progress, 2)
                     msg = f'当前第 {lap} 阶段 | 第 {final_lap} 周目 {boss+1} 王 | 进度 {progress}%'
-                    print(msg)
+                    # print(msg)
                     
                     R_n = 0
                     for RA in RANK_LST:
@@ -1356,3 +1565,146 @@ async def query_line(bot,ev):
         print(e)
         await bot.send(ev,'获取数据时发生错误，请重试')
         pass
+
+
+
+chat_list = {}
+#留言功能
+@sv.on_prefix('会战留言')
+async def chat(bot,ev):
+    global chat_list
+    msg = ev.message.extract_plain_text().strip()
+    uid = ev.user_id
+    qid = ev.group_id
+    if msg == '':
+        await bot.send(ev,'你想说些什么呢^^')
+    t = int(time.time())
+    if qid not in chat_list:
+        chat_list[qid] = {
+            "uid": [],
+            "text": [],
+            "time": [],
+            "extra": [],
+        }    
+    
+    if len(chat_list[qid]["uid"]) > max_chat_list:   
+        del chat_list[qid]["uid"][0]
+        del chat_list[qid]["text"][0]
+        del chat_list[qid]["time"][0]
+    if len(chat_list[qid]["uid"]) <= max_chat_list:
+        chat_list[qid]["uid"].append(int(uid))
+        chat_list[qid]["text"].append(str(msg))
+        chat_list[qid]["time"].append(int(t))
+
+    await bot.send(ev,'已添加留言！')
+    
+@sv.on_prefix('会战留言板','留言板')
+async def chat_board(bot,ev):
+    qid = ev.group_id
+    if qid not in chat_list:
+        await bot.send(ev,'本群暂时没有留言！')
+        return
+    else:
+        msg = '留言板：\n'
+        for i in range(0,len(chat_list[qid]["uid"])):
+            time_now = int(time.time())
+            time_diff = time_now - chat_list[qid]["time"][i]
+            if time_diff <= 60:
+                time_diff = '刚刚'
+            else:
+                time_diff = int(time_diff/60)
+                time_diff = f'{time_diff}分钟前'
+            nickname = chat_list[qid]["uid"][i]
+            try:
+                nickname = await bot.get_group_member_info(group_id = qid,user_id = (chat_list[qid]["uid"][i]))
+                nickname = nickname['nickname']
+            except:
+                pass
+            chat = chat_list[qid]["text"][i]
+            msg += f'[{time_diff}]{nickname}:{chat}\n'
+        await bot.send(ev,msg)
+        return
+
+@sv.on_fullmatch('清空留言板')
+async def clear_chat(bot,ev):
+    qid = ev.group_id
+    u_priv = priv.get_user_priv(ev)
+    if u_priv < sv.manage_priv and acinfo["only_admin"] == 1:
+        await bot.send(ev,'权限不足，当前指令仅管理员可用!')
+        return
+    del chat_list[qid]
+    await bot.send(ev,'已清空本群记录')
+
+@sv.on_fullmatch('出刀时段统计')
+async def stats1(bot,ev):
+    BTime = Image.new("RGBA",(1020,520),'#FFE4C4')
+    draw = ImageDraw.Draw(BTime)
+    setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 20)
+    setFont2 = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 15)    
+
+    time_array = []
+    for i in range(0,24):
+        draw.text((50 + 40*i ,500), f'{i}', font=setFont, fill="#4A515A")
+        time_array.append(0)
+    for i in range(1,6):
+        draw.text((0, 520 - i*100), f'{i}0', font=setFont, fill="#4A515A")
+        draw.line((33, 520 - i*100) + (1000, 520 - i*100), fill='#191970', width=1)
+
+    for line in open(current_folder + "/Output.txt",encoding='utf-8'):
+        values = line.split(",")
+        if values[0] == 'SL':
+            continue
+        battle_time = int(values[1])
+        time_array[battle_time] += 1
+
+    maxtime = max(time_array)
+    overline = False
+    linecolor = {
+        0: '#808080',
+        6: '#9CC5B0',
+        12: '#C54730',
+        18: '#384B5A'
+    }
+    for i in range(0,24):
+        if time_array[i] >= 50:
+            overline = True
+        elif time_array[i] == 0:
+            continue
+        for color in linecolor:
+            if i >= color:
+                color2 = linecolor[color]
+        y_axis = 520 - time_array[i]*10 if overline == False else 20
+        y_axis = 500 - time_array[i]*10 if time_array[i] <= 4 else y_axis
+        fontcolor = 'black' if overline == False else 'purple'
+        if time_array[i] == maxtime:
+            draw.line((60 + 40*i, 500) + (60 + 40*i, y_axis-5), fill='#00008B', width=30)
+        draw.line((60 + 40*i, 500) + (60 + 40*i, y_axis), fill=color2, width=20)
+        draw.text((48 + 40*i, y_axis - 20), f'{(time_array[i])}', font=setFont2, fill=fontcolor)
+    draw.line((30, 500) + (1000, 500), fill=128, width=5)
+    draw.line((30, 20) + (30, 500), fill=128, width=5)
+
+    img = pic2b64(BTime)
+    img = MessageSegment.image(img)        
+    await bot.send(ev,img)
+
+async def pre():
+    conn = sqlite3.connect('yobotdata_new.db')
+    cursor = conn.cursor()
+    for line in open("Output.txt",encoding='utf-8'):
+        values = line.split(",")
+        if values[0] == 'SL':
+            continue
+        cursor.execute("SELECT cid FROM clan_challenge ORDER BY cid DESC LIMIT 1")
+        cid = (cursor.fetchone())[0] + 1
+        boss_cycle = values[7]
+        boss_num = values[8]
+        if values[10] == 1:
+            remain = 0
+        else:
+            remain = 1
+        damage = values[9]
+        is_continue = 0
+        #row_data = (cid, bid, gid, qqid, 0, 0, boss_cycle, boss_num, remain, damage, is_continue)
+        #cursor.execute("INSERT INTO clan_challenge (cid, bid, gid, qqid, challenge_pcrdate, challenge_pcrtime, boss_cycle, boss_num, boss_health_remain, challenge_damage, is_continue) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", row_data)
+        conn.commit()
+    conn.close()
