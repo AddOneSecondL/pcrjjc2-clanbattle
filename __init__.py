@@ -21,7 +21,7 @@ import os
 from time import gmtime
 from hoshino.modules.priconne import chara
 from hoshino.modules.priconne._pcr_data import CHARA_NAME
-from PIL import Image, ImageDraw, ImageFont, ImageChops, ImageFilter, ImageOps
+from PIL import Image, ImageDraw, ImageFont, ImageChops, ImageFilter, ImageOps, ImageEnhance
 from hoshino import util
 import datetime
 import sqlite3
@@ -480,8 +480,13 @@ async def sw_pus(bot , ev):
 
 async def get_boss_icon(dyear,dmonth):
     global boss_icon_list
+    '''proxies = {
+        'http': 'http://127.0.0.1:4780',
+        'https': 'http://127.0.0.1:4780',
+        }  '''   
     url = 'https://pcr.satroki.tech/api/Quest/GetClanBattleInfos?s=cn'
-    res = requests.get(url).json()
+    #res = requests.get(url,proxies=proxies).json()
+    res = requests.get(url).json()#必须考虑代理问题，可能需要改成设置，暂时搁置
     for cres in res:
         if cres["year"] == dyear and cres["month"] == dmonth:
             battle_title = cres["title"]
@@ -492,7 +497,9 @@ async def get_boss_icon(dyear,dmonth):
                 boss_icon_list.append(bp["unitId"])
     base = 'https://redive.estertion.win/icon/unit/'
     save_dir = current_folder
-    for i in boss_icon_list:
+    print(boss_icon_list)
+    for i in boss_icon_list:     
+        #res = requests.get(base+str(i)+'.webp',proxies=proxies)
         res = requests.get(base+str(i)+'.webp')
         with open(current_folder + f'/{i}.png', 'wb') as img:
             img.write(res.content)
@@ -665,29 +672,24 @@ async def status(bot,ev):
         await bot.send(ev,msg)
     else:    
         await bot.send(ev,'生成中...')
-        ##第一部分
-        
-        for root_, dirs_, files_ in os.walk(img_file+'/bg'):
-            bg = files_
-        bgnum = random.randint(0, len(bg)-1)
-        img = Image.open(img_file+'/bg/'+bg[bgnum])
-        img = img.resize((1920,1080),Image.ANTIALIAS)
-            
-        front_img = Image.open(img_file+'/cbt.png')
-        img.paste(front_img, (0,0),front_img) 
+        ##第一部分:验证
+        img = Image.open(img_file+'/hz/bg.png')                          #背景图片
         draw = ImageDraw.Draw(img)
-        setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 40)
         await verify()
-        
         load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
         clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
+        '''with open(os.path.join(os.path.dirname(__file__),f"load_index.json"), "w", encoding='utf-8') as f:                                       
+             f.write(json.dumps(load_index, indent=4,ensure_ascii=False))''' #保存json，用于测试，轮询太久了
+        '''with open(os.path.join(os.path.dirname(__file__),f"load_index.json"), "r", encoding='utf-8') as f:
+             load_index=json.load(f)'''                                      #仅用于读取json测试
+
         try:
-            clan_id = clan_info['clan']['detail']['clan_id']                    #报错 KeyError: 'clan'
+            clan_id = clan_info['clan']['detail']['clan_id']               #报错 KeyError: 'clan'
         except:
             return await bot.send(ev, "报错了，请重试")
         item_list = {}
         try:
-            for item in load_index["item_list"]:                    #报错 KeyError: 'item_list'
+            for item in load_index["item_list"]:                           #报错 KeyError: 'item_list'
                 item_list[item["id"]] = item["stock"]
         except:
             return await bot.send(ev, "报错了，请重试")
@@ -695,10 +697,27 @@ async def status(bot,ev):
         res = await client.callapi('/clan_battle/top', {'clan_id': clan_id, 'is_first': 1, 'current_clan_battle_coin': coin})
         clan_battle_id = res['clan_battle_id']
         clan_name = res['user_clan']['clan_name']
-        draw.text((1340,50), f'{clan_name}', font=setFont, fill="#A020F0")
+        setFont = ImageFont.truetype(img_file+'//084.ttf', 45)
+        draw.text((5,1582), f'{clan_name}', font=setFont, fill="#367cf7")
         rank = res['period_rank']
-        setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 25)
-        draw.text((1340,170), f'排名：{rank}', font=setFont, fill="#A020F0")
+        setFont = ImageFont.truetype(img_file+'//084.ttf', 85)
+        draw.text((10,1786), f'{rank}', font=setFont, fill="#367cf7")
+        ###第一部分：如果当前boss有人出刀，将boss血条变色
+        try:
+               shape_image = Image.open(img_file+'/hz/h01.png')         #导入遮罩
+               original_image = Image.open(img_file+"/hz/1.png")
+               result_image = Image.new("RGBA", original_image.size, (0, 0, 0, 0))
+               for num in range(0,5):  
+                 boss_info2 = await client.callapi('/clan_battle/boss_info', {'clan_id': clan_id, 'clan_battle_id': clan_battle_id, 'lap_num': boss_status[num], 'order_num': num+1}) 
+                 fnum = boss_info2['fighter_num']
+                 circlelist = [59,365,671,977,1283]
+                 if fnum!=0:
+                      result_image.paste(shape_image, (324,circlelist[num]), mask=shape_image)
+                 result_image.paste(original_image, (0, 0), mask=result_image)
+        except:
+                pass
+        img.paste(result_image, (0, 0), mask=result_image)
+        ###第二部分：计算血量百分比，改变boss血量进度条
         lap = res['lap_num']
         img_num = 0 
         for boss in res['boss_info']:
@@ -708,66 +727,40 @@ async def status(bot,ev):
             mhp = boss['max_hp']
             hp = boss['current_hp']
             hp_percentage = hp / mhp  # 计算血量百分比
-        
-            # 根据血量百分比设置血条颜色
-            if hp_percentage > 0.5:
-                hp_color = "lightgreen"
-            elif 0.25 < hp_percentage <= 0.5:
-                hp_color = "orange"
-            else:
-                hp_color = "red"
-            if boss_lap_num - lap == 2:
-                hp_color = "purple"
-            elif boss_lap_num - lap == 1:
-                hp_color = "pink"
-        
-            length = int((hp / mhp) * 1180)
-            hp_bar = rounded_rectangle((length, 95), 10, hp_color)
-            img.paste(hp_bar, (80, 40 + (boss_num - 1) * 142), hp_bar)
-            try:    #晚点改
+            img=drawjingdutiao(hp_percentage,img,boss_num)# 根据血量百分比设置血条颜色
+            draw = ImageDraw.Draw(img)
+            ### 第三部分：输出boss头像
+            try:    
                 try:
                     img2 = Image.open(current_folder+f'/{boss_icon_list[img_num]}.png')
                 except:
                     img2 = R.img(f'priconne/unit/icon_unit_100131.png').open()
                 img_num += 1
-                img2 = img2.resize((64,64),Image.ANTIALIAS)
-                img.paste(img2, (93, 50+(boss_num-1)*142))
-                
-            except:
+                fanglist =[49,350,656,962,1268]                           #boss图片的位置
+                shape2_image = Image.open(img_file+'/hz/h02.png')         #导入遮罩
+                m2 = Image.new('RGBA', shape2_image.size) 
+                img3=img2.resize(shape2_image.size,Image.LANCZOS)         #boss图片改大小
+                m2.paste(img3, mask=shape2_image)
+                img.paste(m2, (17, fanglist[boss_num-1]),mask=m2)   
+            except Exception as e:
+                print(e)
                 pass
             
-            # 在BOSS血条循环中
-            bg_color = (0, 0, 0, 128)  # 半透明黑色背景
-            bg_width = 300  # 背景宽度
-            bg_height = 35  # 背景高度
-            
-            # 绘制半透明背景
-            bg = Image.new('RGBA', (bg_width, bg_height), bg_color)
-            img.paste(bg, (160, 38+(boss_num-1)*142), bg)
-            bg_width = 200
-            stage_color = {
-                1: '#83C266',
-                4: '#67A3E5',
-                11: '#D56CB9',
-                31: '#CF4F45',
-                41: '#A465CC'
-            }
+            ###第四部分输出血量，输出周目，输出abcde阶段
             for st in side:
                 if boss_lap_num >= st:
                     cur_stage = st
             cur_stage = side[cur_stage]
-            for st in stage_color:
-                if boss_lap_num >= st:
-                    bg_color = st
-            bg_color = stage_color[bg_color]
-            bg = Image.new('RGBA', (bg_width, bg_height), bg_color)
-            img.paste(bg, (500, 38+(boss_num-1)*142), bg)
-            setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 25)
-            draw.text((160, 40+(boss_num-1)*142), f'{format_number_with_commas(hp)}/{format_number_with_commas(mhp)}', font=setFont, fill="#FFFFFF")
-            draw.text((500, 40+(boss_num-1)*142), f'{cur_stage}面 {boss_lap_num}周目', font=setFont, fill="#FFFFFF")
-    
-            
-            
+            boss_lap_num_list =[84, 390, 696, 1002, 1308]
+            bosshplist = [69, 375, 681, 987, 1293]
+            setFont = ImageFont.truetype(img_file+'//027.ttf', 68)
+            list =[49,350,656,962,1268]
+            draw.text((510, bosshplist[boss_num-1]), f'{format_number_with_commas(hp)}/{format_number_with_commas(mhp)}', font=setFont, fill="#4662ec")
+            setFont = ImageFont.truetype(img_file+'//MiSans-Demibold.ttf', 125)
+            draw.text((319, boss_lap_num_list[boss_num-1]), f'{boss_lap_num}', font=setFont, fill="#229d9c")
+            setFont = ImageFont.truetype(img_file+'//MiSans-Demibold.ttf', 40)
+            draw.text((290, boss_lap_num_list[boss_num-1]+170), f'{cur_stage}', font=setFont, fill="#ffffff")
+            ###第五部分：输出当前预约情况
             pre = pre_push[boss_num-1]
             all_name = ''
             if pre != []:
@@ -788,20 +781,22 @@ async def status(bot,ev):
                     except CQHttpError as e:
                         print('error name')
                         pass
+            yuyuelist=[139, 455, 761, 1067, 1373]
+            setFont = ImageFont.truetype(img_file+'//027.ttf', 50)
             if all_name != '':
                 all_name+='已预约'
-                draw.text((160, 80+(boss_num-1)*142), f'{all_name}', font=setFont, fill="#A020F0")
+                all_name=line_break(all_name)
+                draw.text((515, yuyuelist[boss_num-1]), f'{all_name}', font=setFont, fill="#030852")
             else:
-                draw.text((160, 80+(boss_num-1)*142), f'无人预约', font=setFont, fill="#A020F0")
+                draw.text((515, yuyuelist[boss_num-1]), f'无人预约', font=setFont, fill="#030852")
             
-        #第二部分    
+        ###第六部分:输出公会头像，出刀情况(这部分没动过)    
         res2 = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 1})
-        #print(res2)
         row = 0
         width = 0
-        setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 20)
+        setFont = ImageFont.truetype(img_file+'//084.ttf', 85)
         last_rank = res2['last_total_ranking']
-        draw.text((1320, 320), f'上期排名:{last_rank}', font=setFont, fill="#A020F0")
+        draw.text((210, 1786), f'{last_rank}', font=setFont, fill="#367cf7")
         all_battle_count = 0
         for members in res2['clan']['members']:
             vid = members['viewer_id']
@@ -813,13 +808,11 @@ async def status(bot,ev):
                 img2 = R.img(f'priconne/unit/icon_unit_{favorid}{stars}1.png').open()
                 img2 = img2.resize((48,48),Image.ANTIALIAS)
         
-                img.paste(img2, (82+int(149.5*width), 761+int(59.8*row)), img2)
+                img.paste(img2, (435+int(149.5*width), 1630+int(59.8*row)), img2)
             except:
                 pass
-    
-            
-    
             kill_sign = 0
+
             kill_acc = 0
             todayt = time.localtime()
             hourh = todayt[3]
@@ -830,8 +823,9 @@ async def status(bot,ev):
                 today = todayt[2]
             
             #today = 26
+            #实用性存疑，不如改成输出第几天，暂时不管
             setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 15)
-            draw.text((1000,760), f'{today}日', font=setFont, fill="#A020F0")
+            #draw.text((1000,760), f'{today}日', font=setFont, fill="#A020F0")
             img3 = Image.new('RGB', (25, 17), "white")
             img4 = Image.new('RGB', (12, 17), "red")
             #img5 = Image.new('RGB', (25, 17), "green")
@@ -917,34 +911,32 @@ async def status(bot,ev):
             all_battle_count += kill_acc
             
             if kill_acc == 0:
-                draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#FF0000")
+                draw.text((483+149*width, 1630+60*row), f'{name}', font=setFont, fill="#FF0000")
             elif 0< kill_acc < 3:
-                draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#FF00FF")
+                draw.text((483+149*width, 1630+60*row), f'{name}', font=setFont, fill="#FF00FF")
             elif kill_acc == 3:
-                draw.text((132+149*width, 761+60*row), f'{name}', font=setFont, fill="#FFFF00")
-            #print(half_sign)
+                draw.text((483+149*width, 1630+60*row), f'{name}', font=setFont, fill="#FFFF00")
             width2 = 0
             kill_acc = kill_acc - half_sign
-            
             while kill_acc-1 >=0:
-                img.paste(img3, (130+int(149.5*width)+30*width2, 785+60*row))
+                img.paste(img3, (480+int(149.5*width)+30*width2, 1654+60*row))
                 kill_acc -= 1
                 width2 += 1
             while half_sign-0.5 >=0:
-                img.paste(img4, (130+int(149.5*width)+30*width2, 785+60*row))
+                img.paste(img4, (480+int(149.5*width)+30*width2, 1654+60*row))
                 half_sign -= 0.5
                 width2 += 1
-            #draw.text((132+149*width, 781+60*row), f'{kill_acc}', font=setFont, fill="#A020F0")
             if sl_sign == 1:
-                draw.text((130+int(149.5*width), 785+60*row), f'SL', font=setFont, fill="black")
+                draw.text((433+int(149.5*width), 1654+60*row), f'SL', font=setFont, fill="black")
             width += 1
-            if width == 6:
+            if width == 5:
                 width = 0
                 row += 1    
-        #file.close()
-        count_m = len(res2['clan']['members'])*3        
-        draw.text((1000,780), f'今日已出{all_battle_count}刀/{count_m}刀', font=setFont, fill="#A020F0")
-        #第三部分
+        ###第七部分:输出今日已出xx刀/90刀
+        count_m = len(res2['clan']['members'])*3  
+        setFont = ImageFont.truetype(img_file+'//084.ttf', 45)
+        draw.text((20,2000), f'{all_battle_count}刀/{count_m}刀', font=setFont, fill="#367cf7")      
+        ###第八部分:输出最近出刀战绩(这部分没动过)  
         if res != 0:
             
             info = res['boss_info'] #BOSS
@@ -982,14 +974,15 @@ async def status(bot,ev):
                         ifkill = '并击破'
                         #push = True
                     msg = f'[{day}日{hour:02}:{minu:02}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}'
+                    setFont = ImageFont.truetype(img_file+'//pcrcnfont.ttf', 20)
                     if kill == 1:
-                        draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="black")
+                        draw.text((440, 2170+(order*20)), f'{msg}', font=setFont, fill="black")
                     else:
-                        draw.text((1320, 385+(order*15)), f'{msg}', font=setFont, fill="purple")
-            #留言部分
+                        draw.text((440, 2170+(order*20)), f'{msg}', font=setFont, fill="purple")
+            ###第九部分：留言（没用过，直接照搬）
             qid = ev.group_id
             if qid not in chat_list:
-                draw.text((1380,761), f'本群暂时没有留言！', font=setFont, fill="#A020F0")
+                draw.text((440,2150), f'本群暂时没有留言！', font=setFont, fill="#A020F0")
             else:
                 msg = '留言板：\n'
                 for i in range(0,len(chat_list[qid]["uid"])):
@@ -1008,50 +1001,19 @@ async def status(bot,ev):
                         pass
                     chat = chat_list[qid]["text"][i]
                     msg += f'[{time_diff}]{nickname}:{chat}\n'
-                draw.text((1380,761), f'{msg}', font=setFont, fill="#A020F0")
-                    
-                    # if order == 1:
-                    #     res3 = await client.callapi('/clan_battle/history_report', {'clan_id': clan_id, 'history_id': int(arrow)})
-                    #     print(res3)
-                    #     row = 0
-                    #     for hi in res3['history_report']:
-                    #         hvid = hi['viewer_id']
-                    #         #hunit_id = hi['unit_id'] 
-                    #         if hvid != 0:
-                    #             hstars = hi['unit_rarity']
-                    #             hdmg = hi['damage']
-                    #             favorid = str(hi['unit_id'])[:-2]
-                    #             stars = 3 if hstars != 6 else 6
-                    #             try:
-                    #                 img2 = R.img(f'priconne/unit/icon_unit_{favorid}{stars}1.png').open()
-                    #                 img2 = img2.resize((48,48),Image.ANTIALIAS)
-                    #                 img.paste(img2, (1320,761+int(59.8*row)))
-                    #             except:
-                    #                 pass
-                    #             draw.text((1380,761+int(59.8*row)), f'伤害{hdmg}', font=setFont, fill="#A020F0")
-                    #             row += 1
-
-            draw.text((1320, 230), f'当前{next_lap_1}周目', font=setFont, fill="#A020F0")            
-            
-            fnum1 = -1
-            try:
-                boss_info2 = await client.callapi('/clan_battle/boss_info', {'clan_id': clan_id, 'clan_battle_id': clan_battle_id, 'lap_num': next_lap, 'order_num': next_boss})
-                fnum1 = boss_info2['fighter_num']
-            except:
-                pass
-            #print(boss_info2)
-            
-            draw.text((1020,860), f'当前有{fnum1}名玩家正在实战', font=setFont, fill="#A020F0")
+                draw.text((440,2130), f'{msg}', font=setFont, fill="#A020F0")         
         else:
             print('error')
-        
+        ###第十部分：收尾
         width = img.size[0]   # 获取宽度
         height = img.size[1]   # 获取高度
         img = img.resize((int(width*1), int(height*1)), Image.ANTIALIAS)    
-        
-        
+        bright_enhancer = ImageEnhance.Brightness(img)
+        # 传入调整系数1.1,改变亮度
+        img = bright_enhancer.enhance(1.1)
         img = p2ic2b64(img)
         img = MessageSegment.image(img)
+
         await bot.send(ev, img)
         # except:
         #     await bot.send(ev,'发生不可预料的错误，请重试')
@@ -1708,3 +1670,69 @@ async def pre():
         #cursor.execute("INSERT INTO clan_challenge (cid, bid, gid, qqid, challenge_pcrdate, challenge_pcrtime, boss_cycle, boss_num, boss_health_remain, challenge_damage, is_continue) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", row_data)
         conn.commit()
     conn.close()
+
+def drawjingdutiao(percent,img,boss_num):           #血量百分比进度条，返回一个image对象
+  width = 907 
+  height = 214
+  circlelist = [59,365,671,977,1283]
+  # 定义半圆弧形的参数
+  center_x2 = 700  # 右侧弧形的中心点x坐标
+  center_y = height // 2  # 弧形的中心点y坐标
+  radius = height // 2  # 弧形的半径
+  start_angle = 270  # 弧形的起始角度（逆时针方向）
+  end_angle = 90  # 弧形的结束角度（逆时针方向）
+  bg_image = img
+  final = Image.new("RGBA", bg_image.size)  
+  if percent<1:
+    image = Image.new("RGBA", (width, height))
+    # 创建绘制对象
+    draw = ImageDraw.Draw(image)
+    center_x1 = (percent)*7*100  # 左侧弧形的中心点x坐标
+    # 绘制左侧半圆弧形
+    draw.arc((center_x1 - radius, center_y - radius, center_x1 + radius, center_y + radius), start_angle, end_angle, fill=(255, 255, 255, 0))
+    # 绘制右侧半圆弧形
+    draw.arc((center_x2 - radius, center_y - radius, center_x2 + radius, center_y + radius), start_angle, end_angle, fill=(255, 255, 255, 100))
+    # 绘制连接的直线
+    line_start = (center_x1, center_y - radius)  # 连接直线的起始点坐标
+    line_end = (center_x2, center_y - radius)  # 连接直线的结束点坐标
+    draw.line((line_start, line_end), fill=(255, 255, 255, 100))
+    line_start = (center_x1, center_y + radius)  # 连接直线的起始点坐标
+    line_end = (center_x2, center_y + radius)  # 连接直线的结束点坐标
+    draw.line((line_start, line_end), fill=(255, 255, 255, 100))
+    ImageDraw.floodfill(image, (center_x2-1, center_y + radius-1), value=(239, 246, 252,190), border=None, thresh=0)
+    r, g, b, a = image.split() 
+    final.paste(image, (394, circlelist[boss_num-1]))
+  final = Image.alpha_composite(bg_image, final)   #paste不能用于半透明的东西
+  return final    
+
+
+def line_break(line):
+    LINE_CHAR_COUNT = 15*2  # 每行字符数：15个中文字符(=30)    #####这段是切割长文本，用于drawtext换行
+    TABLE_WIDTH = 4
+    ret = ''
+    width = 0
+    for c in line:
+        if len(c.encode('utf8')) == 3:  # 中文
+            if LINE_CHAR_COUNT == width + 1:  # 剩余位置不够一个汉字
+                width = 2
+                ret += '\n' + c
+            else: # 中文宽度加2，注意换行边界
+                width += 2
+                ret += c
+        else:
+            if c == '\t':
+                space_c = TABLE_WIDTH - width % TABLE_WIDTH  # 已有长度对TABLE_WIDTH取余
+                ret += ' ' * space_c
+                width += space_c
+            elif c == '\n':
+                width = 0
+                ret += c
+            else:
+                width += 1
+                ret += c
+        if width >= LINE_CHAR_COUNT:
+            ret += '\n'
+            width = 0
+    if ret.endswith('\n'):
+        return ret
+    return ret + '\n'
