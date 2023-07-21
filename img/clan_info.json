@@ -1,0 +1,856 @@
+{
+    "clan": {
+        "detail": {
+            "clan_id": 83887,
+            "leader_name": "奥帝努斯",
+            "leader_viewer_id": 1387250424322,
+            "leader_favorite_unit": {
+                "id": 109901,
+                "unit_rarity": 3,
+                "battle_rarity": 0,
+                "unit_level": 122,
+                "promotion_level": 12,
+                "exceed_stage": 0,
+                "skin_data": {
+                    "icon_skin_id": 0,
+                    "sd_skin_id": 0,
+                    "still_skin_id": 0,
+                    "motion_id": 0
+                }
+            },
+            "clan_name": "缘分落地生根是我们",
+            "description": "群号398380968",
+            "join_condition": 2,
+            "activity": 7,
+            "clan_battle_mode": 0,
+            "member_num": 30,
+            "emblem": {
+                "emblem_id": 10502003,
+                "ex_value": 0
+            }
+        },
+        "members": [
+            {
+                "viewer_id": 1017156037174,
+                "name": "aLi3z(浅挖",
+                "emblem": {
+                    "emblem_id": 10201045,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 111301,
+                    "unit_rarity": 5,
+                    "battle_rarity": 0,
+                    "unit_level": 204,
+                    "promotion_level": 21,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689761142,
+                "total_power": 2963308
+            },
+            {
+                "viewer_id": 1073624645141,
+                "name": "无氪金战士",
+                "emblem": {
+                    "emblem_id": 10201051,
+                    "ex_value": 0
+                },
+                "level": 204,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 100601,
+                    "unit_rarity": 6,
+                    "battle_rarity": 0,
+                    "unit_level": 194,
+                    "promotion_level": 14,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689763190,
+                "total_power": 3253287
+            },
+            {
+                "viewer_id": 1074431198787,
+                "name": "halo",
+                "emblem": {
+                    "emblem_id": 11001022,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 107801,
+                    "unit_rarity": 5,
+                    "battle_rarity": 0,
+                    "unit_level": 196,
+                    "promotion_level": 20,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 3,
+                        "sd_skin_id": 1,
+                        "still_skin_id": 3,
+                        "motion_id": 2
+                    }
+                },
+                "last_login_time": 1689704205,
+                "total_power": 3032367
+            },
+            {
+                "viewer_id": 1091230229186,
+                "name": "龙炎哥你似得好惨啊",
+                "emblem": {
+                    "emblem_id": 10201358,
+                    "ex_value": 0
+                },
+                "level": 109,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 101001,
+                    "unit_rarity": 6,
+                    "battle_rarity": 0,
+                    "unit_level": 103,
+                    "promotion_level": 12,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689693669,
+                "total_power": 489027
+            },
+            {
+                "viewer_id": 1096948190761,
+                "name": "mikuco",
+                "emblem": {
+                    "emblem_id": 10501001,
+                    "ex_value": 0
+                },
+                "level": 204,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 108101,
+                    "unit_rarity": 5,
+                    "battle_rarity": 0,
+                    "unit_level": 166,
+                    "promotion_level": 17,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689722989,
+                "total_power": 3061187
+            },
+            {
+                "viewer_id": 1106843179590,
+                "name": "畅想之心",
+                "emblem": {
+                    "emblem_id": 10201078,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 110301,
+                    "unit_rarity": 5,
+                    "battle_rarity": 3,
+                    "unit_level": 202,
+                    "promotion_level": 20,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689764136,
+                "total_power": 3179077
+            },
+            {
+                "viewer_id": 1128777310785,
+                "name": "红叶叶叶",
+                "emblem": {
+                    "emblem_id": 10201045,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 112001,
+                    "unit_rarity": 5,
+                    "battle_rarity": 0,
+                    "unit_level": 202,
+                    "promotion_level": 21,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689765885,
+                "total_power": 3136509
+            },
+            {
+                "viewer_id": 1133594464353,
+                "name": "Eagle",
+                "emblem": {
+                    "emblem_id": 10201335,
+                    "ex_value": 0
+                },
+                "level": 204,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 108901,
+                    "unit_rarity": 4,
+                    "battle_rarity": 0,
+                    "unit_level": 163,
+                    "promotion_level": 16,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689703570,
+                "total_power": 3231853
+            },
+            {
+                "viewer_id": 1149874400388,
+                "name": "JOCkey",
+                "emblem": {
+                    "emblem_id": 10201464,
+                    "ex_value": 0
+                },
+                "level": 203,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 103601,
+                    "unit_rarity": 6,
+                    "battle_rarity": 0,
+                    "unit_level": 199,
+                    "promotion_level": 20,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 2
+                    }
+                },
+                "last_login_time": 1689714811,
+                "total_power": 3304307
+            },
+            {
+                "viewer_id": 1211610693176,
+                "name": "KoTaTu",
+                "emblem": {
+                    "emblem_id": 10201412,
+                    "ex_value": 0
+                },
+                "level": 204,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 105301,
+                    "unit_rarity": 5,
+                    "battle_rarity": 0,
+                    "unit_level": 193,
+                    "promotion_level": 19,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689734712,
+                "total_power": 2126192
+            },
+            {
+                "viewer_id": 1221899435516,
+                "name": "咕噜靈波",
+                "emblem": {
+                    "emblem_id": 10201030,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 101001,
+                    "unit_rarity": 6,
+                    "battle_rarity": 0,
+                    "unit_level": 205,
+                    "promotion_level": 16,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689767229,
+                "total_power": 3679585
+            },
+            {
+                "viewer_id": 1246984133180,
+                "name": "弥子（不挖了",
+                "emblem": {
+                    "emblem_id": 10201342,
+                    "ex_value": 0
+                },
+                "level": 203,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 106101,
+                    "unit_rarity": 5,
+                    "battle_rarity": 0,
+                    "unit_level": 200,
+                    "promotion_level": 21,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689513282,
+                "total_power": 2274115
+            },
+            {
+                "viewer_id": 1256708603580,
+                "name": "Srendipity",
+                "emblem": {
+                    "emblem_id": 10201335,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 117101,
+                    "unit_rarity": 3,
+                    "battle_rarity": 0,
+                    "unit_level": 1,
+                    "promotion_level": 1,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689769059,
+                "total_power": 1903100
+            },
+            {
+                "viewer_id": 1274376235537,
+                "name": "想翻身的咸鱼",
+                "emblem": {
+                    "emblem_id": 10201099,
+                    "ex_value": 0
+                },
+                "level": 204,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 103601,
+                    "unit_rarity": 6,
+                    "battle_rarity": 0,
+                    "unit_level": 202,
+                    "promotion_level": 21,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689704444,
+                "total_power": 3341232
+            },
+            {
+                "viewer_id": 1278619179581,
+                "name": "达伦哈亚西",
+                "emblem": {
+                    "emblem_id": 10201329,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 105701,
+                    "unit_rarity": 5,
+                    "battle_rarity": 0,
+                    "unit_level": 204,
+                    "promotion_level": 21,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689738973,
+                "total_power": 4480362
+            },
+            {
+                "viewer_id": 1306428821127,
+                "name": "遥远的梦",
+                "emblem": {
+                    "emblem_id": 10201090,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 103201,
+                    "unit_rarity": 6,
+                    "battle_rarity": 0,
+                    "unit_level": 205,
+                    "promotion_level": 21,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689759736,
+                "total_power": 3991885
+            },
+            {
+                "viewer_id": 1311527417983,
+                "name": "阿布",
+                "emblem": {
+                    "emblem_id": 10201120,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 107801,
+                    "unit_rarity": 5,
+                    "battle_rarity": 0,
+                    "unit_level": 202,
+                    "promotion_level": 21,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689769001,
+                "total_power": 2249718
+            },
+            {
+                "viewer_id": 1321660485136,
+                "name": "大同风",
+                "emblem": {
+                    "emblem_id": 10201507,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 117101,
+                    "unit_rarity": 5,
+                    "battle_rarity": 0,
+                    "unit_level": 205,
+                    "promotion_level": 21,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689756352,
+                "total_power": 4104349
+            },
+            {
+                "viewer_id": 1335472606713,
+                "name": "哐哐",
+                "emblem": {
+                    "emblem_id": 10201120,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 112001,
+                    "unit_rarity": 5,
+                    "battle_rarity": 3,
+                    "unit_level": 204,
+                    "promotion_level": 21,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689764130,
+                "total_power": 3113460
+            },
+            {
+                "viewer_id": 1337778219579,
+                "name": "浅夏哒",
+                "emblem": {
+                    "emblem_id": 10201286,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 112901,
+                    "unit_rarity": 3,
+                    "battle_rarity": 0,
+                    "unit_level": 163,
+                    "promotion_level": 17,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689747525,
+                "total_power": 2846531
+            },
+            {
+                "viewer_id": 1342995192320,
+                "name": "自傷少女莉莉丝",
+                "emblem": {
+                    "emblem_id": 10201272,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 111901,
+                    "unit_rarity": 5,
+                    "battle_rarity": 0,
+                    "unit_level": 203,
+                    "promotion_level": 21,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689767017,
+                "total_power": 3777491
+            },
+            {
+                "viewer_id": 1343771102748,
+                "name": "陆北亭",
+                "emblem": {
+                    "emblem_id": 10201099,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 180301,
+                    "unit_rarity": 5,
+                    "battle_rarity": 4,
+                    "unit_level": 204,
+                    "promotion_level": 21,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689763183,
+                "total_power": 4123790
+            },
+            {
+                "viewer_id": 1361466155541,
+                "name": "牧羊人芬里尔",
+                "emblem": {
+                    "emblem_id": 10201395,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 102801,
+                    "unit_rarity": 6,
+                    "battle_rarity": 0,
+                    "unit_level": 203,
+                    "promotion_level": 21,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689768940,
+                "total_power": 3402990
+            },
+            {
+                "viewer_id": 1364846254766,
+                "name": "五等分的花嫁",
+                "emblem": {
+                    "emblem_id": 10201436,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 100601,
+                    "unit_rarity": 6,
+                    "battle_rarity": 0,
+                    "unit_level": 168,
+                    "promotion_level": 20,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689768108,
+                "total_power": 1834942
+            },
+            {
+                "viewer_id": 1368034350751,
+                "name": "莉安娜娜丶月",
+                "emblem": {
+                    "emblem_id": 10201099,
+                    "ex_value": 0
+                },
+                "level": 172,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 103801,
+                    "unit_rarity": 5,
+                    "battle_rarity": 0,
+                    "unit_level": 163,
+                    "promotion_level": 17,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689774883,
+                "dispatch_units": [
+                    {
+                        "unit_id": 101001,
+                        "evolution": 6,
+                        "level": 169,
+                        "promotion_level": 12,
+                        "position": 3,
+                        "dispatch_start_time": 1685200665,
+                        "dispatch_count": 28,
+                        "dispatch_status": 1,
+                        "unique_equipped_list": [
+                            1
+                        ],
+                        "current_dispatch_bonus": 5054297
+                    },
+                    {
+                        "unit_id": 108401,
+                        "evolution": 3,
+                        "level": 172,
+                        "promotion_level": 12,
+                        "position": 4,
+                        "dispatch_start_time": 1685200671,
+                        "dispatch_count": 3,
+                        "dispatch_status": 1,
+                        "unique_equipped_list": [
+                            1
+                        ],
+                        "current_dispatch_bonus": 1515154
+                    }
+                ],
+                "total_power": 2058227
+            },
+            {
+                "viewer_id": 1381955217991,
+                "name": "星陨牛牛",
+                "emblem": {
+                    "emblem_id": 10101003,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 101101,
+                    "unit_rarity": 6,
+                    "battle_rarity": 0,
+                    "unit_level": 205,
+                    "promotion_level": 21,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 2
+                    }
+                },
+                "last_login_time": 1689722180,
+                "total_power": 4709767
+            },
+            {
+                "viewer_id": 1387250424322,
+                "name": "奥帝努斯",
+                "emblem": {
+                    "emblem_id": 10502003,
+                    "ex_value": 0
+                },
+                "level": 204,
+                "role": 40,
+                "favorite_unit": {
+                    "id": 109901,
+                    "unit_rarity": 3,
+                    "battle_rarity": 0,
+                    "unit_level": 122,
+                    "promotion_level": 12,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689698797,
+                "total_power": 2557557
+            },
+            {
+                "viewer_id": 1400621048310,
+                "name": "气抖冷",
+                "emblem": {
+                    "emblem_id": 10201464,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 115701,
+                    "unit_rarity": 5,
+                    "battle_rarity": 3,
+                    "unit_level": 202,
+                    "promotion_level": 12,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689772782,
+                "total_power": 3962347
+            },
+            {
+                "viewer_id": 1411291512311,
+                "name": "心豚",
+                "emblem": {
+                    "emblem_id": 10201033,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 0,
+                "favorite_unit": {
+                    "id": 113401,
+                    "unit_rarity": 3,
+                    "battle_rarity": 0,
+                    "unit_level": 194,
+                    "promotion_level": 19,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689652387,
+                "total_power": 3177535
+            },
+            {
+                "viewer_id": 1427745118753,
+                "name": "佑树",
+                "emblem": {
+                    "emblem_id": 10301015,
+                    "ex_value": 0
+                },
+                "level": 205,
+                "role": 30,
+                "favorite_unit": {
+                    "id": 107501,
+                    "unit_rarity": 5,
+                    "battle_rarity": 0,
+                    "unit_level": 202,
+                    "promotion_level": 7,
+                    "exceed_stage": 0,
+                    "skin_data": {
+                        "icon_skin_id": 0,
+                        "sd_skin_id": 0,
+                        "still_skin_id": 0,
+                        "motion_id": 0
+                    }
+                },
+                "last_login_time": 1689738981,
+                "total_power": 4455489
+            }
+        ]
+    },
+    "clan_status": 2,
+    "current_period_ranking": 1589,
+    "last_total_ranking": 1835,
+    "grade_rank": 1589,
+    "current_clan_battle_mode": 0,
+    "last_clan_battle_mode": 0,
+    "current_battle_joined": 1,
+    "last_battle_joined": 1,
+    "clan_point": 0,
+    "remaining_count": 0,
+    "unread_liked_count": 0
+}
