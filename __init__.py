@@ -480,12 +480,13 @@ async def sw_pus(bot , ev):
 
 async def get_boss_icon(dyear,dmonth):
     global boss_icon_list
-    proxies = {
+    '''proxies = {
         'http': 'http://127.0.0.1:4780',
         'https': 'http://127.0.0.1:4780',
-        }     
+        }  '''   
     url = 'https://pcr.satroki.tech/api/Quest/GetClanBattleInfos?s=cn'
-    res = requests.get(url,proxies=proxies).json()
+    #res = requests.get(url,proxies=proxies).json()
+    res = requests.get(url).json()#必须考虑代理问题，可能需要改成设置，暂时搁置
     for cres in res:
         if cres["year"] == dyear and cres["month"] == dmonth:
             battle_title = cres["title"]
@@ -498,7 +499,8 @@ async def get_boss_icon(dyear,dmonth):
     save_dir = current_folder
     print(boss_icon_list)
     for i in boss_icon_list:     
-        res = requests.get(base+str(i)+'.webp',proxies=proxies)
+        #res = requests.get(base+str(i)+'.webp',proxies=proxies)
+        res = requests.get(base+str(i)+'.webp')
         with open(current_folder + f'/{i}.png', 'wb') as img:
             img.write(res.content)
             img.close()
@@ -643,7 +645,6 @@ async def status(bot,ev):
         return
     #try:
     if acinfo["statu_text_mode"] == 1:
-        print("11111111111111111111111111")
         msg = ''
         load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
         clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
@@ -677,9 +678,11 @@ async def status(bot,ev):
         await verify()
         load_index = await client.callapi('/load/index', {'carrier': 'OPPO'})
         clan_info = await client.callapi('/clan/info', {'clan_id': 0, 'get_user_equip': 0})
+        '''with open(os.path.join(os.path.dirname(__file__),f"load_index.json"), "w", encoding='utf-8') as f:                                       
+             f.write(json.dumps(load_index, indent=4,ensure_ascii=False))''' #保存json，用于测试，轮询太久了
         '''with open(os.path.join(os.path.dirname(__file__),f"load_index.json"), "r", encoding='utf-8') as f:
-             load_index=json.load(f)
-             #f.write(json.dumps(load_index, indent=4,ensure_ascii=False))'''#仅用于保存json测试
+             load_index=json.load(f)'''                                      #仅用于读取json测试
+
         try:
             clan_id = clan_info['clan']['detail']['clan_id']               #报错 KeyError: 'clan'
         except:
