@@ -18,5 +18,6 @@
     "ingame_calc_mode": 0,
     "statu_text_mode" : 0,
     "only_admin": 0,
-    "captcha_group": 0
+    "captcha_group": 0,
+    "allow_undefined_vid2yobot":0
 }

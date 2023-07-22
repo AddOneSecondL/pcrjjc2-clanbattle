@@ -33,6 +33,7 @@ sv = SafeService('会战推送', help_=sv_help, bundle='pcr查询')
 curpath = dirname(__file__)
 ##############################下面这个框填要推送的群
 forward_group_list = []
+yobot_dir = ''
 ##############################
 
 
@@ -389,7 +390,7 @@ async def teafak():
                     cur_side = side[cur_side]
                     msg += f'[{cur_side}-{battle_type}]{name} 对 {lap} 周目 {boss} 王造成了 {damage} 伤害{ifkill}({is_auto_r})\n'
                     in_battle.append([boss,kill])
-                    output = f'{day},{hour},{minu},{seconds},{arrow},{name},{vid},{lap},{boss},{damage},{kill},{enemy_id},{clan_battle_id},{is_auto},{start_time},{used_time},'  #记录出刀，后面要用
+                    output = f'{day},{hour},{minu},{seconds},{arrow},{name},{vid},{lap},{boss},{damage},{kill},{enemy_id},{clan_battle_id},{is_auto},{start_time},{used_time},{ctime},'  #记录出刀，后面要用
                     with open(current_folder+"/Output.txt","a",encoding='utf-8') as file:   
                         file.write(str(output)+'\n')
                         file.close()
@@ -1559,7 +1560,8 @@ async def chat(bot,ev):
         chat_list[qid]["time"].append(int(t))
 
     await bot.send(ev,'已添加留言！')
-    
+
+
 @sv.on_prefix('会战留言板','留言板')
 async def chat_board(bot,ev):
     qid = ev.group_id
@@ -1649,61 +1651,41 @@ async def stats1(bot,ev):
     img = MessageSegment.image(img)        
     await bot.send(ev,img)
 
-async def pre():
-    conn = sqlite3.connect('yobotdata_new.db')
-    cursor = conn.cursor()
-    for line in open("Output.txt",encoding='utf-8'):
-        values = line.split(",")
-        if values[0] == 'SL':
-            continue
-        cursor.execute("SELECT cid FROM clan_challenge ORDER BY cid DESC LIMIT 1")
-        cid = (cursor.fetchone())[0] + 1
-        boss_cycle = values[7]
-        boss_num = values[8]
-        if values[10] == 1:
-            remain = 0
-        else:
-            remain = 1
-        damage = values[9]
-        is_continue = 0
-        #row_data = (cid, bid, gid, qqid, 0, 0, boss_cycle, boss_num, remain, damage, is_continue)
-        #cursor.execute("INSERT INTO clan_challenge (cid, bid, gid, qqid, challenge_pcrdate, challenge_pcrtime, boss_cycle, boss_num, boss_health_remain, challenge_damage, is_continue) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", row_data)
-        conn.commit()
-    conn.close()
+
 
 def drawjingdutiao(percent,img,boss_num):           #血量百分比进度条，返回一个image对象
-  width = 907 
-  height = 214
-  circlelist = [59,365,671,977,1283]
-  # 定义半圆弧形的参数
-  center_x2 = 700  # 右侧弧形的中心点x坐标
-  center_y = height // 2  # 弧形的中心点y坐标
-  radius = height // 2  # 弧形的半径
-  start_angle = 270  # 弧形的起始角度（逆时针方向）
-  end_angle = 90  # 弧形的结束角度（逆时针方向）
-  bg_image = img
-  final = Image.new("RGBA", bg_image.size)  
-  if percent<1:
-    image = Image.new("RGBA", (width, height))
-    # 创建绘制对象
-    draw = ImageDraw.Draw(image)
-    center_x1 = (percent)*7*100  # 左侧弧形的中心点x坐标
-    # 绘制左侧半圆弧形
-    draw.arc((center_x1 - radius, center_y - radius, center_x1 + radius, center_y + radius), start_angle, end_angle, fill=(255, 255, 255, 0))
-    # 绘制右侧半圆弧形
-    draw.arc((center_x2 - radius, center_y - radius, center_x2 + radius, center_y + radius), start_angle, end_angle, fill=(255, 255, 255, 100))
-    # 绘制连接的直线
-    line_start = (center_x1, center_y - radius)  # 连接直线的起始点坐标
-    line_end = (center_x2, center_y - radius)  # 连接直线的结束点坐标
-    draw.line((line_start, line_end), fill=(255, 255, 255, 100))
-    line_start = (center_x1, center_y + radius)  # 连接直线的起始点坐标
-    line_end = (center_x2, center_y + radius)  # 连接直线的结束点坐标
-    draw.line((line_start, line_end), fill=(255, 255, 255, 100))
-    ImageDraw.floodfill(image, (center_x2-1, center_y + radius-1), value=(239, 246, 252,190), border=None, thresh=0)
-    r, g, b, a = image.split() 
-    final.paste(image, (394, circlelist[boss_num-1]))
-  final = Image.alpha_composite(bg_image, final)   #paste不能用于半透明的东西
-  return final    
+    width = 907 
+    height = 214
+    circlelist = [59,365,671,977,1283]
+    # 定义半圆弧形的参数
+    center_x2 = 700  # 右侧弧形的中心点x坐标
+    center_y = height // 2  # 弧形的中心点y坐标
+    radius = height // 2  # 弧形的半径
+    start_angle = 270  # 弧形的起始角度（逆时针方向）
+    end_angle = 90  # 弧形的结束角度（逆时针方向）
+    bg_image = img
+    final = Image.new("RGBA", bg_image.size)  
+    if percent<1:
+        image = Image.new("RGBA", (width, height))
+        # 创建绘制对象
+        draw = ImageDraw.Draw(image)
+        center_x1 = (percent)*7*100  # 左侧弧形的中心点x坐标
+        # 绘制左侧半圆弧形
+        draw.arc((center_x1 - radius, center_y - radius, center_x1 + radius, center_y + radius), start_angle, end_angle, fill=(255, 255, 255, 0))
+        # 绘制右侧半圆弧形
+        draw.arc((center_x2 - radius, center_y - radius, center_x2 + radius, center_y + radius), start_angle, end_angle, fill=(255, 255, 255, 100))
+        # 绘制连接的直线
+        line_start = (center_x1, center_y - radius)  # 连接直线的起始点坐标
+        line_end = (center_x2, center_y - radius)  # 连接直线的结束点坐标
+        draw.line((line_start, line_end), fill=(255, 255, 255, 100))
+        line_start = (center_x1, center_y + radius)  # 连接直线的起始点坐标
+        line_end = (center_x2, center_y + radius)  # 连接直线的结束点坐标
+        draw.line((line_start, line_end), fill=(255, 255, 255, 100))
+        ImageDraw.floodfill(image, (center_x2-1, center_y + radius-1), value=(239, 246, 252,190), border=None, thresh=0)
+        r, g, b, a = image.split() 
+        final.paste(image, (394, circlelist[boss_num-1]))
+    final = Image.alpha_composite(bg_image, final)   #paste不能用于半透明的东西
+    return final    
 
 
 def line_break(line):
@@ -1736,3 +1718,80 @@ def line_break(line):
     if ret.endswith('\n'):
         return ret
     return ret + '\n'
+
+
+@sv.on_prefix('会战绑定')#不会写这个，先用着等会改
+async def binduid(bot,ev):
+    uid = ev.message.extract_plain_text().strip()
+    gid = str(ev.group_id)
+    qid = str(ev.user_id)
+    with open(join(curpath, 'bind.json')) as fp:
+        binds = load(fp)
+    if gid not in binds:
+        binds[gid] = {}
+    if qid not in binds[gid]:
+        user_bind = {
+            "uid": int(uid),
+            "qid": int(qid)
+        }
+        binds[gid][qid] = user_bind
+
+    with open(join(curpath, 'bind.json'), mode="w") as fp:
+        json.dump(binds, fp, indent=4, ensure_ascii=False)
+    await bot.send(ev,'绑定完成')
+
+@sv.on_fullmatch('会战数据导入yobot')#实验性功能，还有部分未完成，使用前先备份
+async def trans(bot,ev):
+    if yobot_dir == '':
+        await bot.send(ev,'你没有填入yobot路径!')
+        return
+    conn = sqlite3.connect(yobot_dir + '/src/client/yobot_data/yobotdata_new.db')
+    cursor = conn.cursor()
+    gid = str(ev.group_id)
+    with open(join(curpath, 'bind.json')) as fp:
+        binds = load(fp)
+
+    for line in open(current_folder + "/Output.txt",encoding='utf-8'):
+        if line != '':
+            line = line.split(',')
+            if line[0] != 'SL':
+                pcrtime = int(line[1])*3600+int(line[2])*60+int(line[3])
+                arrow = int(line[4])
+                battle_id = int(line[4])
+                vid = int(line[6])
+                veri = False
+                for info in binds[gid]:
+                    if vid == binds[gid][str(info)]['uid']:
+                        vid = binds[gid][str(info)]['qid']
+                        veri = True
+                if veri == False and acinfo["allow_undefined_vid2yobot"] == 0:
+                        await bot.send(ev,f'{vid}未绑定QQ号，无法在yobot中查看数据图表')
+                        return
+                boss_cycle = int(line[7])
+                boss_num = int(line[8])
+                damage = int(line[9])
+                kill = int(line[10])
+                if kill == 1:
+                    remain = 0
+                else:
+                    remain = 1
+                clanbattle_num = int(line[12])
+                start_time = int(line[14])
+                try:
+                    ctime = int(line[16])
+                except:
+                    ctime = int(time.time())
+                pcrdate = ctime / (24*60*60)
+                if start_time == 90:#同样会出现判断初始刀和补偿刀错误
+                    battle_type = 0
+                else:
+                    battle_type = 1
+                cursor.execute("SELECT cid FROM clan_challenge ORDER BY cid DESC LIMIT 1")
+                cid = (cursor.fetchone())[0] + 1
+                row_data = (cid, clanbattle_num, gid, vid, pcrdate, pcrtime, boss_cycle, boss_num, remain, damage, battle_type, battle_id)
+                cursor.execute("INSERT INTO clan_challenge (cid, bid, gid, qqid, challenge_pcrdate, challenge_pcrtime, boss_cycle, boss_num, boss_health_remain, challenge_damage, is_continue, message) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", row_data)
+                conn.commit()
+    conn.close()
+    await bot.send(ev,'导入完成')
+
+
