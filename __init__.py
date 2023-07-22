@@ -1742,6 +1742,10 @@ async def binduid(bot,ev):
 
 @sv.on_fullmatch('会战数据导入yobot')#实验性功能，还有部分未完成，使用前先备份
 async def trans(bot,ev):
+    u_priv = priv.get_user_priv(ev)
+    if u_priv < sv.manage_priv:
+        await bot.send(ev,'权限不足，当前指令仅管理员可用!')
+        return
     if yobot_dir == '':
         await bot.send(ev,'你没有填入yobot路径!')
         return
@@ -1786,6 +1790,7 @@ async def trans(bot,ev):
                     battle_type = 0
                 else:
                     battle_type = 1
+
                 cursor.execute("SELECT cid FROM clan_challenge ORDER BY cid DESC LIMIT 1")
                 cid = (cursor.fetchone())[0] + 1
                 row_data = (cid, clanbattle_num, gid, vid, pcrdate, pcrtime, boss_cycle, boss_num, remain, damage, battle_type, battle_id)
@@ -1795,3 +1800,110 @@ async def trans(bot,ev):
     await bot.send(ev,'导入完成')
 
 
+@sv.on_prefix(f'修改星级')#修改工具号助战星级
+async def change_star(bot,ev):
+    u_priv = priv.get_user_priv(ev)
+    if u_priv < sv.manage_priv:
+        await bot.send(ev,'权限不足，当前指令仅管理员可用!')
+        return
+        
+    param = ev.message.extract_plain_text().strip()
+    param = param.split(' ')
+    try:
+        ms = param[0]
+        st = param[1]
+        await verify()
+        cha_fin = 0
+        for CHARA in CHARA_NAME:
+            cha = CHARA
+            if ms in CHARA_NAME[cha]:
+                print(ms)
+                cha_fin = cha
+                unis = CHARA_NAME[cha][0]
+                await bot.send(ev,f'已找到{unis},正在尝试更改星级...')  #角色存在
+                break
+    
+        await verify()
+        unit_id = int(str(cha_fin) + '01')
+        res = await client.callapi('/unit/change_rarity', {'change_rarity_unit_list': [{'unit_id': unit_id, 'battle_rarity': st}]})
+        await bot.send(ev,f'{unis}已经更改星级至{st}星')
+    except:
+        await bot.send(ev,f'发生了错误！可能是:参数出现错误|星级不可更改|没有该角色!')
+        pass
+
+@sv.on_prefix(f'修改助战')
+async def clan_uni(bot,ev):
+    u_priv = priv.get_user_priv(ev)
+    if u_priv < sv.manage_priv:
+        await bot.send(ev,'权限不足，当前指令仅管理员可用!')
+        return
+    ms = ev.message.extract_plain_text().strip()
+    cha_fin = 0
+    for CHARA in CHARA_NAME:
+        cha = CHARA
+        if ms in CHARA_NAME[cha]:
+            print(ms)
+            cha_fin = cha
+            unis = CHARA_NAME[cha][0]
+            await bot.send(ev,f'已找到{unis},正在尝试挂至助战...')  #角色存在
+            break
+
+    await verify()
+    prof = await client.callapi('/support_unit/get_setting', {})
+    u1 = prof['clan_support_units']
+    
+    for uni in u1:
+        unit_id = int(str(uni['unit_id'])[:-2])
+        if cha_fin == unit_id:
+            await bot.send(ev,f'操作失败，角色已经在助战中!')   #已经在助战中
+            return
+    
+    num = 0
+    for uni in u1:
+        if num >= 2:
+            unit_time = uni['support_start_time']
+            now = time.time()
+            diff = int(now - unit_time)
+            print(diff)
+            if int(diff) > 1800:
+                unit_id = int(str(cha_fin) + '01')
+                try:
+                    info = await client.callapi('/support_unit/change_setting', {'support_type': 1, 'position': num+1, 'action': 2, 'unit_id': unit_id})
+                    time.sleep(3)
+                    info2 = await client.callapi('/support_unit/change_setting', {'support_type': 1, 'position': num+1, 'action': 1, 'unit_id': unit_id})
+                    msg = f'已将{unis}挂至{num-1}号助战位中'
+                    await bot.send(ev,msg)
+                except:
+                    await bot.send(ev,'操作失败')
+                    pass
+                return 
+        num += 1
+
+        #print(CHARA)
+    await bot.send(ev,'发生了错误！可能是：没有找到相应角色|角色名输入错误|两个助战位都未超过30分钟!')
+
+@sv.on_fullmatch(f'会战助战')
+async def clan_un(bot,ev):
+    await verify()
+    msg = ''
+    prof = await client.callapi('/support_unit/get_setting', {})
+    u1 = prof['clan_support_units']
+    num = 0
+    for uni in u1:
+        if num >= 2:
+            unit_id = int(str(uni['unit_id'])[:-2])
+            unit_time = uni['support_start_time']
+            if unit_id in CHARA_NAME:
+                unit_id = CHARA_NAME[unit_id][0]
+            now = time.time()
+            diff = int(now - unit_time)
+            if diff > 1800:
+                replace = '可替换'
+            else:
+                replace = '不能替换'
+            f_t = time.strftime("%H时%M分%S秒", gmtime(diff))
+            msg += f'{unit_id}正在助战{f_t}s    {replace}\n'
+            
+        num += 1
+
+    await bot.send(ev,msg)
