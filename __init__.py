@@ -1740,64 +1740,7 @@ async def binduid(bot,ev):
         json.dump(binds, fp, indent=4, ensure_ascii=False)
     await bot.send(ev,'绑定完成')
 
-@sv.on_fullmatch('会战数据导入yobot')#实验性功能，还有部分未完成，使用前先备份
-async def trans(bot,ev):
-    u_priv = priv.get_user_priv(ev)
-    if u_priv < sv.manage_priv:
-        await bot.send(ev,'权限不足，当前指令仅管理员可用!')
-        return
-    if yobot_dir == '':
-        await bot.send(ev,'你没有填入yobot路径!')
-        return
-    conn = sqlite3.connect(yobot_dir + '/src/client/yobot_data/yobotdata_new.db')
-    cursor = conn.cursor()
-    gid = str(ev.group_id)
-    with open(join(curpath, 'bind.json')) as fp:
-        binds = load(fp)
 
-    for line in open(current_folder + "/Output.txt",encoding='utf-8'):
-        if line != '':
-            line = line.split(',')
-            if line[0] != 'SL':
-                pcrtime = int(line[1])*3600+int(line[2])*60+int(line[3])
-                arrow = int(line[4])
-                battle_id = int(line[4])
-                vid = int(line[6])
-                veri = False
-                for info in binds[gid]:
-                    if vid == binds[gid][str(info)]['uid']:
-                        vid = binds[gid][str(info)]['qid']
-                        veri = True
-                if veri == False and acinfo["allow_undefined_vid2yobot"] == 0:
-                        await bot.send(ev,f'{vid}未绑定QQ号，无法在yobot中查看数据图表')
-                        return
-                boss_cycle = int(line[7])
-                boss_num = int(line[8])
-                damage = int(line[9])
-                kill = int(line[10])
-                if kill == 1:
-                    remain = 0
-                else:
-                    remain = 1
-                clanbattle_num = int(line[12])
-                start_time = int(line[14])
-                try:
-                    ctime = int(line[16])
-                except:
-                    ctime = int(time.time())
-                pcrdate = ctime / (24*60*60)
-                if start_time == 90:#同样会出现判断初始刀和补偿刀错误
-                    battle_type = 0
-                else:
-                    battle_type = 1
-
-                cursor.execute("SELECT cid FROM clan_challenge ORDER BY cid DESC LIMIT 1")
-                cid = (cursor.fetchone())[0] + 1
-                row_data = (cid, clanbattle_num, gid, vid, pcrdate, pcrtime, boss_cycle, boss_num, remain, damage, battle_type, battle_id)
-                cursor.execute("INSERT INTO clan_challenge (cid, bid, gid, qqid, challenge_pcrdate, challenge_pcrtime, boss_cycle, boss_num, boss_health_remain, challenge_damage, is_continue, message) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", row_data)
-                conn.commit()
-    conn.close()
-    await bot.send(ev,'导入完成')
 
 
 @sv.on_prefix(f'修改星级')#修改工具号助战星级
